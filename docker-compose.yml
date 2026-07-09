@@ -1,0 +1,21 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: arb_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: arb
+      POSTGRES_PASSWORD: arb_password
+      POSTGRES_DB: researchhub
+    ports:
+      - "5433:5432"
+    volumes:
+      - arb_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arb -d researchhub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  arb_pgdata:

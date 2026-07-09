@@ -1,0 +1,292 @@
+UNIVERSITY OF LAGOS
+Faculty of Engineering  ·  Academic Research Board
+
+ARB ResearchHub
+Product Requirements Document
+Version 2.0   |   June 2026
+Status: DRAFT — Pending Approval
+
+DOCUMENT APPROVAL
+
+This document requires sign-off from the stakeholders listed below before any development work begins. Signatures confirm review and acceptance of the requirements as stated.
+Role
+Name
+Signature & Date
+Project Lead / Author (ARB Development Team Lead)
+
+
+ARB Chairperson
+
+
+
+REVISION HISTORY
+
+Version
+Summary
+v1.0
+Reworked PRD reflecting the updated tech stack, three-role model, and dual-defense workflow.
+v2.0
+Reworked PRD reflecting a simplified two-role model (Student, Admin), a single-stage submission flow, and a public research library with keyword and AI-powered search.
+
+1.   OVERVIEW
+
+1.1  Product Summary
+ARB ResearchHub is a web platform built for the Faculty of Engineering at the University of Lagos. Its purpose is to digitise the research project submission process and to make approved research available as a publicly searchable library. Registered students upload their completed projects, an administrator reviews and publishes them, and the approved papers become accessible to anyone through a search-driven research hub.
+1.2  Context
+Engineering students at UNILAG produce research projects that are currently submitted and reviewed manually, and once completed are not collected anywhere the wider community can find them. ARB ResearchHub automates the submission and review process and builds an openly accessible library of approved work.
+This version deliberately narrows the scope of the original PRD. The supervisor role and the two-stage defense workflow are removed; the administrator performs the review. The library, previously behind authentication, is now public. This keeps the build focused while opening the most valuable output — the body of approved research — to the public.
+1.3  Objectives
+Provide registered students with a simple, digital flow for uploading completed research projects.
+Give administrators a clear dashboard to review submitted projects and decide on them.
+Allow administrators to approve and publish projects, making them accessible to the public-facing library.
+Allow members of the public to come into the platform and search the research hub for resources.
+Provide excellent search: a keyword query returns every published paper whose content contains that term, alongside an AI-powered search that understands natural-language queries against the hub.
+
+2.   SCOPE
+
+2.1  In Scope (v2.0)
+Authentication and role-based access (Student, Admin).
+Student project submission: upload of a completed project document and its metadata.
+Admin review workflow with approve / request revision / reject decisions.
+Admin publishing: approved projects are published to the public library; the Admin can unpublish.
+Public research library: browse and search approved papers without an account.
+Keyword search across paper metadata and full document text, with relevance ranking and highlighted results.
+AI-powered (semantic) search for natural-language querying of the library.
+Admin dashboard and basic platform statistics.
+In-app notifications to students on review outcomes.
+2.2  Out of Scope (v2.0)
+Supervisor role and supervisor dashboards. Review is performed by the Admin.
+The two-stage / dual-defense workflow. Replaced by a single project submission.
+Supervisor–student assignment, including CSV or XLSX bulk assignment.
+Native mobile applications. The platform is web-first (responsive).
+Public user accounts. The public side is search-and-read only; no comments, ratings, or logins for visitors.
+
+3.   USER ROLES
+
+The platform has two authenticated roles and one unauthenticated audience. Role is determined at registration and can only be changed by an Admin.
+Role
+Who they are
+Primary purpose on platform
+Student
+Engineering student at UNILAG who has completed a research project. Registers with a @unilag.edu.ng email and matric number.
+Upload a completed project; track submission status; respond to revision requests; view the published paper in the library.
+Admin
+Platform administrator. Account created by an existing Admin or seeded at launch.
+Review submitted projects; approve, request revision, or reject; publish and unpublish papers; platform-wide oversight.
+Public Visitor
+Any member of the public. No account.
+Search, browse, and read or download published papers. Cannot upload or see anything that is not published.
+
+4.   FUNCTIONAL REQUIREMENTS
+
+4.1  Authentication & Onboarding
+4.1.1  Registration
+A student registers with their UNILAG email address (@unilag.edu.ng). The system validates the email domain; non-UNILAG addresses are rejected.
+During registration the student provides their name, department, and matric number.
+On successful registration, a verification link is sent to the provided email. The account is inactive until the link is clicked.
+Admin accounts are not self-registerable; they are seeded at launch or created by an existing Admin.
+4.1.2  Login & Sessions
+Students and Admins log in with their email and password. Sessions are managed with JWT tokens (access and refresh).
+Users can request a password reset by entering their email; a time-limited reset link is sent.
+The public library requires no authentication. Only uploading and administration sit behind login.
+4.2  Project Submission
+A submission is a single record. It is created once by a student and covers one complete research project.
+4.2.1  Submission Record
+Each submission contains the following fields:
+Title of the research project.
+Abstract.
+Author name and matric number (auto-populated from the student account).
+Department and academic year / session.
+Tags / keywords (optional).
+Project document — the full paper as a single PDF.
+Submission status (see Section 4.2.3).
+4.2.2  Submission Rules
+A student may have only one active submission at a time.
+A student can resubmit revised materials in response to a &apos;Revision Requested&apos; decision, replacing the previous upload.
+A student cannot edit a paper once it is published. Changes after publication require Admin action.
+4.2.3  Submission Status Model
+Status
+Meaning
+Draft
+Student has started the submission but not yet submitted it for review.
+Pending Review
+Project submitted; awaiting an Admin decision.
+Revision Requested
+Admin has requested changes. The student must address the feedback and resubmit.
+Rejected
+Admin has rejected the submission. It does not enter the library.
+Published
+Admin has approved the submission. The paper is live in the public Research Library.
+Unpublished
+Admin has removed a published paper from the library (the record is retained).
+4.3  Admin Review
+4.3.1  Review Dashboard
+The Admin dashboard shows all submissions grouped by status, with submissions pending review surfaced first and sorted by submission date.
+The Admin can open a submission, read its metadata, and view or download the uploaded document.
+4.3.2  Review Actions
+Approve — approves and publishes the project to the public library. The document is indexed for search automatically.
+Request Revision — returns the submission to the student with written comments. Comments are required.
+Reject — closes the submission. It does not enter the library. Comments are optional but encouraged.
+Review decisions and comments are stored and visible to the student.
+4.3.3  Publishing
+When the Admin approves a submission, the paper is automatically published to the library. No separate step is required.
+The Admin can unpublish a paper at any time, removing it from the library without deleting the submission record, and can re-publish it later.
+The Admin can edit a published paper&apos;s metadata and tags.
+4.4  Research Library & Search
+4.4.1  Access
+The library is fully public. No login is required to search, browse, read, or download a published paper.
+Only papers with status &apos;Published&apos; appear in the library. Drafts, pending, rejected, and unpublished records are never visible to the public.
+4.4.2  Browse & Filter
+Visitors can browse library entries and filter by department, academic year / session, and tags.
+Each library entry displays: title, author, department, year, abstract, and tags.
+Visitors can download the full paper PDF from the detail view.
+4.4.3  Keyword Search
+Search runs against paper titles, abstracts, and the full text of each document, so that any word appearing anywhere in a paper makes that paper findable.
+When a paper is published, the system extracts the full text of the uploaded document and stores it as searchable content.
+A keyword query is matched against the title, abstract, tags, author, and full document text.
+Results are ranked by relevance, with matches in the title and abstract weighted above matches in the body.
+Each result displays a highlighted excerpt showing where the search term appears.
+Search tolerates partial words, word stems, and minor spelling errors, and supports multi-word queries.
+4.4.4  AI-Powered Search
+In addition to keyword search, the library provides an AI-powered search that understands the meaning of a query rather than matching exact words. A visitor can describe what they are looking for in plain language and receive the most relevant papers, even where the wording differs from the text of those papers.
+When a paper is published, the system generates a vector representation (embedding) of its content.
+A natural-language query is matched against these representations by similarity, returning papers that are conceptually related to the query.
+Keyword and AI-powered results are combined so that exact-word matches and meaning-based matches both contribute to the ranking.
+4.4.5  Implementation Notes
+Keyword search uses PostgreSQL full-text search (a tsvector index over title, abstract, tags, and document text) with relevance ranking, highlighted excerpts, and trigram matching for spelling tolerance.
+AI-powered search uses vector embeddings stored in the same PostgreSQL database (pgvector), so no separate search service is required at this scale.
+4.5  Admin Dashboard
+Review queue — submissions awaiting action, with counts by status.
+Published-paper management — find any published paper to unpublish, re-publish, or edit its metadata and tags.
+Platform statistics — total students, submissions by status, and published-paper count.
+4.6  Notifications
+Notifications are delivered in-app. Email notifications are a desirable enhancement but not a v2.0 requirement.
+A bell icon in the navigation bar shows the count of unread notifications.
+Notification triggers:
+Event
+Notified
+Message
+Student submits a project
+Admin
+A new project has been submitted for review.
+Admin requests revision
+Student
+Revisions have been requested. Please check your submission for comments.
+Admin rejects a submission
+Student
+Your submission has not been approved. Please see the comments for details.
+Admin approves and publishes
+Student
+Your research paper is now live in the public Research Library.
+Admin unpublishes a paper
+Student
+Your paper has been removed from the library. Contact your Admin for details.
+
+5.   KEY USER STORIES
+
+5.1  Student
+Story ID
+User Story
+S-01
+As a student, I can register with my UNILAG email and matric number so that I have a verified account on the platform.
+S-02
+As a student, I can upload my completed project document with its title, abstract, and tags so that an Admin can review it.
+S-03
+As a student, I can view my submission status and the Admin&apos;s comments so that I know what action to take next.
+S-04
+As a student, I can revise and resubmit materials when a revision is requested so that I can address the feedback.
+S-05
+As a student, I receive an in-app notification when my paper is published to the public library.
+
+5.2  Admin
+Story ID
+User Story
+A-01
+As an admin, I can see all submitted projects awaiting review in one queue.
+A-02
+As an admin, I can open a submission, read the full document, and make a decision (Approve / Request Revision / Reject).
+A-03
+As an admin, approving a project publishes it to the public library and indexes it for search automatically.
+A-04
+As an admin, I can unpublish, re-publish, and edit the metadata and tags of any published paper.
+A-05
+As an admin, I can see platform-level statistics on the dashboard.
+
+5.3  Public Visitor
+Story ID
+User Story
+P-01
+As a visitor, I can search the library by any keyword and see every published paper containing that word, ranked by relevance.
+P-02
+As a visitor, I can see a highlighted excerpt showing where my search term appears in each result.
+P-03
+As a visitor, I can search using plain language and receive papers that match the meaning of my query, not only the exact words.
+P-04
+As a visitor, I can filter and browse papers by department, year, and tags without logging in.
+P-05
+As a visitor, I can open a paper and read or download the full PDF.
+
+6.   NON-FUNCTIONAL REQUIREMENTS
+
+Area
+Requirement
+Security
+Student and Admin routes are protected by JWT-based authentication. Role-based access control is enforced server-side on every API endpoint. Passwords are hashed (bcrypt or equivalent). HTTPS is enforced in all environments.
+Public Access
+Library search, browse, and read endpoints require no authentication and serve only published content. These endpoints are rate-limited to prevent abuse.
+File Storage
+Uploaded PDFs are stored in a cloud object store (e.g. Supabase Storage or AWS S3). Files are not served directly from the application server. Published papers are served via a CDN.
+Search Performance
+Keyword and AI-powered search responses should return within 2 seconds under normal load. Text extraction, indexing, and embedding generation run in the background when a paper is published, so the Admin action stays responsive.
+Performance
+Library browse and detail pages should load within 2 seconds under normal load. File uploads display a progress indicator; the UI does not block during upload.
+Scalability
+The backend is stateless and horizontally scalable. Database connections are pooled. File storage is external and unbounded by server disk.
+Reliability
+The system targets 99% uptime in production. Database backups are taken daily.
+Accessibility
+The frontend meets WCAG 2.1 AA contrast requirements. All interactive elements are keyboard-navigable and have visible focus states.
+Browser Support
+The platform supports the current and previous major versions of Chrome, Firefox, Safari, and Edge.
+
+7.   TECHNOLOGY STACK
+
+Layer
+Technology
+Frontend
+Next.js (TypeScript) — SSR and client-side rendering for the public, searchable library. Tailwind CSS + ShadCN UI component library.
+Backend
+Express.js (TypeScript) — REST API. Modular route/controller/service structure.
+Database
+PostgreSQL — primary relational data store for users, submissions, and published papers, including full-text search and vector embeddings.
+Search
+PostgreSQL full-text search for keyword queries (tsvector + GIN index, relevance ranking, highlighted excerpts). Vector embeddings via pgvector in the same database for AI-powered semantic search. No separate search service is required at this scale.
+Document Processing
+Server-side text extraction from uploaded PDFs and embedding generation when a paper is published. Runs in the background.
+File Storage
+Supabase Storage or AWS S3, with CDN distribution for published documents.
+Authentication
+JWT (access + refresh token pair). Email verification and password reset via a transactional email service (e.g. Resend or SendGrid).
+Hosting — Frontend
+Vercel (automatic preview deployments per pull request).
+Hosting — Backend
+Railway or Fly.io (containerised Express application).
+CI/CD
+GitHub Actions — lint, type-check, test, build, and deploy pipeline.
+Error Tracking
+Sentry (frontend and backend).
+
+8.   OPEN ITEMS & ASSUMPTIONS
+
+8.1  Open Items
+Author identity — how much author information (name, matric number, department) is shown on the public page versus kept internal should be decided before the library detail page is built.
+Rejected submissions — the current flow ends with a rejection. A formal process for what happens next (a new submission, or an appeal to the Admin) should be defined.
+Email notifications — in-app only for v2.0. The decision on whether to add transactional email should be made before the notification module is built.
+Co-authored projects — whether a project may list multiple authors, and how that maps to the single submitting student account, should be confirmed.
+8.2  Assumptions
+All students have a valid @unilag.edu.ng email address. Students without one cannot self-register and are out of scope for this version.
+Each project is submitted as a single PDF, and a student has at most one active submission at a time.
+Admin approval is the only gate before a paper is published. No additional approval step is required.
+The public library is search-and-read only. Visitors cannot comment, rate, or upload.
+The corpus is at faculty scale, so PostgreSQL handles both keyword and AI-powered search without a dedicated search engine.
+
