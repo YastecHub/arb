@@ -15,6 +15,7 @@ export default function StudentDashboard() {
   const router = useRouter();
   const [subs, setSubs] = useState<Submission[] | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -22,7 +23,12 @@ export default function StudentDashboard() {
   }, [loading, user, router]);
 
   async function load() {
-    setSubs(await api<Submission[]>('/api/submissions/mine', { auth: true }));
+    try {
+      setSubs(await api<Submission[]>('/api/submissions/mine', { auth: true }));
+    } catch (err: any) {
+      setError(err.message || 'Could not load your submissions');
+      setSubs([]);
+    }
   }
   useEffect(() => {
     if (user?.role === 'student') load();
@@ -30,9 +36,12 @@ export default function StudentDashboard() {
 
   async function submitForReview(id: string) {
     setBusyId(id);
+    setError('');
     try {
       await api(`/api/submissions/${id}/submit`, { method: 'POST', auth: true });
       await load();
+    } catch (err: any) {
+      setError(err.message || 'Could not submit for review');
     } finally {
       setBusyId(null);
     }
@@ -61,6 +70,8 @@ export default function StudentDashboard() {
       {hasActive && (
         <Alert kind="info">You have an active submission. Finish or await a decision on it before starting a new one.</Alert>
       )}
+
+      {error && <Alert>{error}</Alert>}
 
       {subs.length === 0 ? (
         <EmptyState title="No submissions yet." hint="Click “New submission” to upload your project." />

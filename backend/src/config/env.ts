@@ -25,7 +25,7 @@ export const env = {
   },
 
   allowedEmailDomain: process.env.ALLOWED_EMAIL_DOMAIN ?? 'unilag.edu.ng',
-  autoVerify: (process.env.AUTH_AUTO_VERIFY ?? 'true') === 'true',
+  autoVerify: (process.env.AUTH_AUTO_VERIFY ?? 'false') === 'true',
 
   seedAdmin: {
     email: process.env.SEED_ADMIN_EMAIL ?? 'admin@unilag.edu.ng',

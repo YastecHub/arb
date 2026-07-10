@@ -70,7 +70,7 @@ export async function facets() {
 
 export async function detail(id: string) {
   const { rows } = await query(
-    `SELECT ${CARD_COLS}, pdf_url FROM submissions WHERE id = $1 AND status = 'published'`,
+    `SELECT ${CARD_COLS} FROM submissions WHERE id = $1 AND status = 'published'`,
     [id]
   );
   if (!rows[0]) throw notFound('Paper not found or not published');

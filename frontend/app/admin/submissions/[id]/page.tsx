@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { api, API_URL } from '@/lib/api';
+import { api, apiBlobUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, Tag } from '@/components/ui';
@@ -16,18 +16,37 @@ export default function ReviewPage() {
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
-  const pdfUrl = `${API_URL}/api/library/${id}/download`;
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/login');
   }, [loading, user, router]);
 
   async function load() {
-    setSub(await api<Submission>(`/api/admin/submissions/${id}`, { auth: true }));
+    try {
+      setSub(await api<Submission>(`/api/admin/submissions/${id}`, { auth: true }));
+    } catch (err: any) {
+      setError(err.message || 'Could not load the submission');
+    }
   }
   useEffect(() => {
     if (user?.role === 'admin') load();
   }, [user, id]);
+
+  useEffect(() => {
+    if (user?.role !== 'admin' || !sub?.has_pdf) return;
+    let objectUrl: string | null = null;
+    apiBlobUrl(`/api/admin/submissions/${id}/download`)
+      .then((url) => {
+        objectUrl = url;
+        setPdfUrl(url);
+      })
+      .catch((err) => setError(err.message));
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setPdfUrl(null);
+    };
+  }, [user, id, sub?.has_pdf]);
 
   async function act(kind: 'approve' | 'request-revision' | 'reject' | 'unpublish' | 'republish') {
     setError('');
@@ -52,7 +71,12 @@ export default function ReviewPage() {
     }
   }
 
-  if (loading || !sub) return <Spinner label="Loading submission…" />;
+  if (loading) return <Spinner label="Loading submission…" />;
+  if (!sub) {
+    return error ? (
+      <div className="space-y-4"><Alert>{error}</Alert><Link href="/admin" className="btn-outline">← Back to dashboard</Link></div>
+    ) : <Spinner label="Loading submission…" />;
+  }
 
   const canDecide = sub.status === 'pending_review';
 
@@ -89,15 +113,17 @@ export default function ReviewPage() {
             </div>
           </div>
 
-          {sub.pdf_url ? (
+          {sub.has_pdf ? (
             <div className="card overflow-hidden">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <span className="text-sm font-semibold text-slate-600">Document</span>
-                <a href={pdfUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-600 hover:underline">
-                  Open in new tab
-                </a>
+                {pdfUrl && (
+                  <a href={pdfUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-600 hover:underline">
+                    Open in new tab
+                  </a>
+                )}
               </div>
-              <iframe src={pdfUrl} title="PDF" className="h-[70vh] w-full" />
+              {pdfUrl ? <iframe src={pdfUrl} title="PDF" className="h-[70vh] w-full" /> : <Spinner label="Loading PDF…" />}
             </div>
           ) : (
             <Alert kind="info">No PDF was attached to this submission.</Alert>

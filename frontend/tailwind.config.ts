@@ -16,6 +16,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ['ui-sans-serif', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        display: ['Georgia', 'Cambria', 'Times New Roman', 'serif'],
       },
     },
   },

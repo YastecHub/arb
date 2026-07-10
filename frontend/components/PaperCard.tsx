@@ -4,13 +4,33 @@ import type { Paper, SearchResult } from '@/lib/types';
 import { Tag } from './ui';
 import { formatDate } from '@/lib/format';
 
+function HighlightedExcerpt({ value }: { value: string }) {
+  const parts = value.split(/(<mark>|<\/mark>)/i);
+  let highlighted = false;
+  return (
+    <p className="mb-3 text-sm leading-relaxed text-slate-600">
+      {parts.map((part, index) => {
+        if (part.toLowerCase() === '<mark>') {
+          highlighted = true;
+          return null;
+        }
+        if (part.toLowerCase() === '</mark>') {
+          highlighted = false;
+          return null;
+        }
+        return highlighted ? <mark key={index}>{part}</mark> : part;
+      })}
+    </p>
+  );
+}
+
 export default function PaperCard({ paper }: { paper: Paper | SearchResult }) {
   const excerpt = (paper as SearchResult).excerpt;
   const matchType = (paper as SearchResult).matchType;
   return (
-    <Link href={`/paper/${paper.id}`} className="card block p-5 transition hover:border-brand-300 hover:shadow-md">
+    <Link href={`/paper/${paper.id}`} className="card group block p-5 transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-lg">
       <div className="mb-2 flex items-start justify-between gap-3">
-        <h3 className="font-semibold leading-snug text-slate-800">{paper.title}</h3>
+        <h3 className="font-display text-xl font-semibold leading-snug text-[#071826] transition group-hover:text-[#9a6810]">{paper.title}</h3>
         {matchType === 'hybrid' && (
           <span className="shrink-0 rounded-full bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
             AI match
@@ -23,10 +43,7 @@ export default function PaperCard({ paper }: { paper: Paper | SearchResult }) {
         {paper.session ? ` · ${paper.session}` : ''} · {formatDate(paper.published_at)}
       </p>
       {excerpt ? (
-        <p
-          className="mb-3 text-sm leading-relaxed text-slate-600"
-          dangerouslySetInnerHTML={{ __html: excerpt }}
-        />
+        <HighlightedExcerpt value={excerpt} />
       ) : (
         <p className="mb-3 line-clamp-3 text-sm leading-relaxed text-slate-600">{paper.abstract}</p>
       )}

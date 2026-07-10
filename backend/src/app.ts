@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import path from 'path';
 import { env } from './config/env';
 import { errorHandler } from './middleware/error';
 import authRoutes from './modules/auth/auth.routes';
@@ -15,11 +14,6 @@ export function createApp() {
   app.use(cors({ origin: env.frontendUrl === '*' ? true : [env.frontendUrl], credentials: true }));
   app.use(express.json({ limit: '2mb' }));
   app.use(express.urlencoded({ extended: true }));
-
-  // Local-disk storage is served here (dev fallback; prod uses S3/Supabase + CDN).
-  if (env.storage.driver === 'local') {
-    app.use('/files', express.static(path.resolve(process.cwd(), env.storage.localDir)));
-  }
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'arb-researchhub', env: env.nodeEnv }));
 

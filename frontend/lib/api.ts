@@ -52,6 +52,70 @@ async function refreshTokens(): Promise<boolean> {
   return true;
 }
 
+export async function apiBlobUrl(path: string, retry = false): Promise<string> {
+  const headers: Record<string, string> = {};
+  if (tokenStore.access) headers.Authorization = `Bearer ${tokenStore.access}`;
+  const res = await fetch(`${API_URL}${path}`, { headers });
+
+  if (res.status === 401 && !retry && (await refreshTokens())) {
+    return apiBlobUrl(path, true);
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    throw new ApiError(res.status, data?.error || 'Could not load document');
+  }
+  return URL.createObjectURL(await res.blob());
+}
+
+export async function apiUpload<T = any>(
+  path: string,
+  method: 'POST' | 'PUT',
+  body: FormData,
+  onProgress: (percent: number) => void,
+  retry = false
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open(method, `${API_URL}${path}`);
+    if (tokenStore.access) xhr.setRequestHeader('Authorization', `Bearer ${tokenStore.access}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable && event.total > 0) {
+        onProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+      }
+    };
+
+    xhr.onerror = () => reject(new ApiError(0, 'Network error while uploading the PDF'));
+    xhr.onload = async () => {
+      if (xhr.status === 401 && !retry) {
+        if (await refreshTokens()) {
+          try {
+            resolve(await apiUpload<T>(path, method, body, onProgress, true));
+          } catch (err) {
+            reject(err);
+          }
+          return;
+        }
+      }
+
+      let data: any = null;
+      try {
+        data = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        // A successful upload may legitimately return no JSON body.
+      }
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new ApiError(xhr.status, data?.error || 'Upload failed', data?.details));
+        return;
+      }
+      onProgress(100);
+      resolve(data as T);
+    };
+
+    xhr.send(body);
+  });
+}
+
 export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
   const headers: Record<string, string> = {};
   if (opts.auth && tokenStore.access) headers.Authorization = `Bearer ${tokenStore.access}`;

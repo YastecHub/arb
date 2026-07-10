@@ -29,7 +29,7 @@ export interface Submission {
   tags: string[];
   status: SubmissionStatus;
   review_comment: string | null;
-  pdf_url: string | null;
+  has_pdf: boolean;
   index_status: string;
   author_email?: string;
   published_at: string | null;
@@ -46,7 +46,6 @@ export interface Paper {
   session: string | null;
   tags: string[];
   published_at: string;
-  pdf_url?: string;
 }
 
 export interface SearchResult extends Paper {

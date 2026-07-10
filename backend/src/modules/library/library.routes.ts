@@ -23,8 +23,9 @@ router.get(
   asyncHandler(async (req, res) => {
     const q = typeof req.query.q === 'string' ? req.query.q : '';
     const mode = req.query.mode === 'ai' ? 'ai' : 'keyword';
-    const limit = Math.min(50, Number(req.query.limit) || 20);
-    res.json(await search(q, mode, limit));
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const pageSize = Math.min(50, Math.max(1, Number(req.query.pageSize ?? req.query.limit) || 20));
+    res.json(await search(q, mode, page, pageSize));
   })
 );
 

@@ -13,17 +13,23 @@ export default function PublishedManagement() {
   const [items, setItems] = useState<Submission[] | null>(null);
   const [editing, setEditing] = useState<Submission | null>(null);
   const [busyId, setBusyId] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/login');
   }, [loading, user, router]);
 
   async function load() {
-    const [pub, unpub] = await Promise.all([
-      api<Submission[]>('/api/admin/submissions?status=published', { auth: true }),
-      api<Submission[]>('/api/admin/submissions?status=unpublished', { auth: true }),
-    ]);
-    setItems([...pub, ...unpub]);
+    try {
+      const [pub, unpub] = await Promise.all([
+        api<Submission[]>('/api/admin/submissions?status=published', { auth: true }),
+        api<Submission[]>('/api/admin/submissions?status=unpublished', { auth: true }),
+      ]);
+      setItems([...pub, ...unpub]);
+    } catch (err: any) {
+      setError(err.message || 'Could not load papers');
+      setItems([]);
+    }
   }
   useEffect(() => {
     if (user?.role === 'admin') load();
@@ -31,10 +37,13 @@ export default function PublishedManagement() {
 
   async function toggle(s: Submission) {
     setBusyId(s.id);
+    setError('');
     try {
       const action = s.status === 'published' ? 'unpublish' : 'republish';
       await api(`/api/admin/papers/${s.id}/${action}`, { method: 'POST', auth: true });
       await load();
+    } catch (err: any) {
+      setError(err.message || 'Could not update the paper');
     } finally {
       setBusyId('');
     }
@@ -53,6 +62,8 @@ export default function PublishedManagement() {
           ← Dashboard
         </Link>
       </div>
+
+      {error && <Alert>{error}</Alert>}
 
       {items.length === 0 ? (
         <EmptyState title="No published papers yet." />

@@ -4,7 +4,7 @@ import { AuthProvider } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'ARB ResearchHub — UNILAG Faculty of Engineering',
+  title: 'ULES ARB ResearchHub — Engineering Knowledge, Openly Shared',
   description:
     'Search and read approved engineering research from the University of Lagos. Keyword and AI-powered semantic search.',
 };
@@ -16,8 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <Navbar />
           <main className="mx-auto max-w-6xl px-4 py-8">{children}</main>
-          <footer className="border-t border-slate-200 py-6 text-center text-sm text-slate-400">
-            ARB ResearchHub · University of Lagos, Faculty of Engineering
+          <footer className="border-t border-white/10 bg-[#071826] py-8 text-center text-sm text-slate-400">
+            <p className="font-medium text-slate-200">ULES Academic &amp; Research Board</p>
+            <p className="mt-1">University of Lagos Engineering Society · ResearchHub</p>
           </footer>
         </AuthProvider>
       </body>

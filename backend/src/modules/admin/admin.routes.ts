@@ -7,6 +7,15 @@ import * as svc from './admin.service';
 const router = Router();
 router.use(requireAuth, requireRole('admin'));
 
+const statusSchema = z.enum([
+  'draft',
+  'pending_review',
+  'revision_requested',
+  'rejected',
+  'published',
+  'unpublished',
+]);
+
 router.get(
   '/stats',
   asyncHandler(async (_req, res) => {
@@ -17,8 +26,18 @@ router.get(
 router.get(
   '/submissions',
   asyncHandler(async (req, res) => {
-    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    const status = req.query.status === undefined ? undefined : statusSchema.parse(req.query.status);
     res.json(await svc.listSubmissions(status));
+  })
+);
+
+router.get(
+  '/submissions/:id/download',
+  asyncHandler(async (req, res) => {
+    const { buffer, filename } = await svc.downloadSubmission(req.params.id);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.send(buffer);
   })
 );
 

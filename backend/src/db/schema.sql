@@ -5,6 +5,15 @@
 -- column can be swapped for pgvector's vector(384) + ivfflat index with no API changes.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
+-- PostgreSQL marks array_to_string as stable, which prevents its direct use in a
+-- generated column even though text-array conversion is deterministic here.
+CREATE OR REPLACE FUNCTION immutable_array_to_string(value TEXT[], separator TEXT)
+RETURNS TEXT
+LANGUAGE SQL
+IMMUTABLE
+PARALLEL SAFE
+AS $$ SELECT array_to_string(value, separator) $$;
+
 -- ---------- enums ----------
 DO $$ BEGIN
   CREATE TYPE user_role AS ENUM ('student', 'admin');
@@ -57,7 +66,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   search_vector tsvector GENERATED ALWAYS AS (
     setweight(to_tsvector('english', coalesce(title, '')), 'A') ||
     setweight(to_tsvector('english', coalesce(abstract, '')), 'B') ||
-    setweight(to_tsvector('english', coalesce(array_to_string(tags, ' '), '')), 'B') ||
+    setweight(to_tsvector('english', coalesce(immutable_array_to_string(tags, ' '), '')), 'B') ||
     setweight(to_tsvector('english', coalesce(author_name, '')), 'C') ||
     setweight(to_tsvector('english', coalesce(full_text, '')), 'D')
   ) STORED
@@ -77,6 +86,9 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- ---------- indexes ----------
 CREATE INDEX IF NOT EXISTS idx_submissions_status      ON submissions (status);
 CREATE INDEX IF NOT EXISTS idx_submissions_student     ON submissions (student_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_one_active_per_student
+  ON submissions (student_id)
+  WHERE status IN ('draft', 'pending_review', 'revision_requested');
 CREATE INDEX IF NOT EXISTS idx_submissions_search_vec  ON submissions USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_submissions_title_trgm  ON submissions USING GIN (title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_submissions_abs_trgm    ON submissions USING GIN (abstract gin_trgm_ops);

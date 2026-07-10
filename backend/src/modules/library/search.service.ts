@@ -28,7 +28,7 @@ function toPrefixTsQuery(q: string): string {
  * PRD 4.4.3 keyword search: title/abstract/tags/author/full text, relevance ranked
  * (title & abstract weighted above body), highlighted excerpts, trigram typo tolerance.
  */
-export async function keywordSearch(q: string, limit = 20): Promise<SearchItem[]> {
+export async function keywordSearch(q: string, limit = 20, offset = 0): Promise<SearchItem[]> {
   const tsq = toPrefixTsQuery(q);
   if (!tsq) return [];
   const { rows } = await query<any>(
@@ -43,14 +43,27 @@ export async function keywordSearch(q: string, limit = 20): Promise<SearchItem[]
       WHERE s.status = 'published'
         AND (s.search_vector @@ query OR s.title % $2 OR s.abstract % $2)
       ORDER BY rank DESC, title_sim DESC, s.published_at DESC
-      LIMIT $3`,
-    [tsq, q, limit]
+      LIMIT $3 OFFSET $4`,
+    [tsq, q, limit, offset]
   );
   return rows.map((r) => ({
     ...r,
     score: Number(r.rank) + Number(r.title_sim) * 0.3,
     matchType: 'keyword' as const,
   }));
+}
+
+async function keywordSearchCount(q: string): Promise<number> {
+  const tsq = toPrefixTsQuery(q);
+  if (!tsq) return 0;
+  const { rows } = await query<{ count: string }>(
+    `SELECT COUNT(*)::int AS count
+       FROM submissions s, to_tsquery('english', $1) query
+      WHERE s.status = 'published'
+        AND (s.search_vector @@ query OR s.title % $2 OR s.abstract % $2)`,
+    [tsq, q]
+  );
+  return Number(rows[0]?.count ?? 0);
 }
 
 async function vectorSearch(q: string, limit = 20): Promise<SearchItem[]> {
@@ -121,9 +134,27 @@ export async function aiSearch(q: string, limit = 20): Promise<SearchItem[]> {
   return top.slice(0, limit);
 }
 
-export async function search(q: string, mode: 'keyword' | 'ai', limit = 20) {
+export async function search(q: string, mode: 'keyword' | 'ai', page = 1, pageSize = 20) {
   const trimmed = q.trim();
-  if (!trimmed) return { mode, query: trimmed, aiAvailable: groqEnabled(), results: [] as SearchItem[] };
-  const results = mode === 'ai' ? await aiSearch(trimmed, limit) : await keywordSearch(trimmed, limit);
-  return { mode, query: trimmed, aiAvailable: groqEnabled(), results };
+  if (!trimmed) {
+    return { mode, query: trimmed, aiAvailable: groqEnabled(), results: [] as SearchItem[], total: 0, page: 1, totalPages: 0 };
+  }
+  if (mode === 'ai') {
+    const results = await aiSearch(trimmed, pageSize);
+    return { mode, query: trimmed, aiAvailable: groqEnabled(), results, total: results.length, page: 1, totalPages: results.length ? 1 : 0 };
+  }
+  const safePage = Math.max(1, page);
+  const [results, total] = await Promise.all([
+    keywordSearch(trimmed, pageSize, (safePage - 1) * pageSize),
+    keywordSearchCount(trimmed),
+  ]);
+  return {
+    mode,
+    query: trimmed,
+    aiAvailable: groqEnabled(),
+    results,
+    total,
+    page: safePage,
+    totalPages: Math.ceil(total / pageSize),
+  };
 }

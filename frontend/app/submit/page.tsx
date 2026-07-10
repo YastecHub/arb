@@ -1,7 +1,7 @@
 'use client';
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api } from '@/lib/api';
+import { api, apiBlobUrl, apiUpload } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
 import { Alert, Spinner } from '@/components/ui';
@@ -13,10 +13,12 @@ function SubmitInner() {
 
   const [form, setForm] = useState({ title: '', abstract: '', session: '', tags: '' });
   const [file, setFile] = useState<File | null>(null);
-  const [existingPdf, setExistingPdf] = useState<string | null>(null);
+  const [hasExistingPdf, setHasExistingPdf] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<'draft' | 'submit' | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [ready, setReady] = useState(!editId);
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) router.replace('/login');
@@ -27,10 +29,14 @@ function SubmitInner() {
       api<Submission>(`/api/submissions/${editId}`, { auth: true })
         .then((s) => {
           setForm({ title: s.title, abstract: s.abstract, session: s.session ?? '', tags: s.tags.join(', ') });
-          setExistingPdf(s.pdf_url);
+          setHasExistingPdf(s.has_pdf);
           setReady(true);
         })
-        .catch((e) => setError(e.message));
+        .catch((e) => {
+          setError(e.message || 'Could not load the submission');
+          setLoadFailed(true);
+          setReady(true);
+        });
     }
   }, [editId]);
 
@@ -40,11 +46,12 @@ function SubmitInner() {
 
   async function save(action: 'draft' | 'submit') {
     setError('');
-    if (action === 'submit' && !file && !existingPdf) {
+    if (action === 'submit' && !file && !hasExistingPdf) {
       setError('Please attach your project PDF before submitting.');
       return;
     }
     setBusy(action);
+    setUploadProgress(0);
     try {
       const fd = new FormData();
       fd.set('title', form.title);
@@ -56,19 +63,37 @@ function SubmitInner() {
 
       if (editId) {
         // Update metadata/PDF, then optionally submit for review.
-        await api(`/api/submissions/${editId}`, { method: 'PUT', body: fd, isForm: true, auth: true });
+        await apiUpload(`/api/submissions/${editId}`, 'PUT', fd, setUploadProgress);
         if (action === 'submit') await api(`/api/submissions/${editId}/submit`, { method: 'POST', auth: true });
       } else {
-        await api('/api/submissions', { method: 'POST', body: fd, isForm: true, auth: true });
+        await apiUpload('/api/submissions', 'POST', fd, setUploadProgress);
       }
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.details?.[0]?.message || err.message || 'Something went wrong');
       setBusy(null);
+      setUploadProgress(null);
+    }
+  }
+
+  async function openCurrentPdf() {
+    if (!editId) return;
+    setError('');
+    try {
+      const url = await apiBlobUrl(`/api/submissions/${editId}/download`);
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      setError(err.message || 'Could not load the PDF');
     }
   }
 
   if (loading || !ready) return <Spinner label="Loading…" />;
+  if (loadFailed) return <div className="mx-auto max-w-2xl"><Alert>{error}</Alert></div>;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -90,13 +115,13 @@ function SubmitInner() {
           <input className="input" value={form.title} onChange={(e) => set('title', e.target.value)} required minLength={3} />
         </div>
         <div>
-          <label className="label">Abstract</label>
-          <textarea className="input min-h-[140px]" value={form.abstract} onChange={(e) => set('abstract', e.target.value)} />
+          <label className="label">Abstract *</label>
+          <textarea className="input min-h-[140px]" value={form.abstract} onChange={(e) => set('abstract', e.target.value)} required />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="label">Academic session</label>
-            <input className="input" placeholder="e.g. 2024/2025" value={form.session} onChange={(e) => set('session', e.target.value)} />
+            <label className="label">Academic session *</label>
+            <input className="input" placeholder="e.g. 2024/2025" value={form.session} onChange={(e) => set('session', e.target.value)} required />
           </div>
           <div>
             <label className="label">Tags (comma-separated)</label>
@@ -104,17 +129,17 @@ function SubmitInner() {
           </div>
         </div>
         <div>
-          <label className="label">Project PDF {existingPdf && !file ? '(current file kept unless replaced)' : '*'}</label>
+          <label className="label">Project PDF {hasExistingPdf && !file ? '(current file kept unless replaced)' : '*'}</label>
           <input
             type="file"
             accept="application/pdf"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
           />
-          {existingPdf && !file && (
-            <a href={existingPdf} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs text-brand-600 hover:underline">
+          {hasExistingPdf && !file && (
+            <button type="button" onClick={openCurrentPdf} className="mt-1 inline-block text-xs text-brand-600 hover:underline">
               View current PDF
-            </a>
+            </button>
           )}
         </div>
 
@@ -126,6 +151,27 @@ function SubmitInner() {
             {busy === 'draft' ? 'Saving…' : 'Save as draft'}
           </button>
         </div>
+        {busy && uploadProgress !== null && (
+          <div className="space-y-1" aria-live="polite">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>{uploadProgress < 100 ? 'Uploading document…' : 'Upload complete. Saving submission…'}</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div
+              className="h-2 overflow-hidden rounded-full bg-slate-200"
+              role="progressbar"
+              aria-label="PDF upload progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={uploadProgress}
+            >
+              <div
+                className="h-full rounded-full bg-brand-600 transition-[width] duration-200"
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </form>
     </div>
   );

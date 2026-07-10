@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission, Stats, SubmissionStatus } from '@/lib/types';
-import { StatusBadge, Spinner, EmptyState } from '@/components/ui';
+import { StatusBadge, Spinner, EmptyState, Alert } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 
 const TABS: { key: string; label: string; status?: SubmissionStatus }[] = [
@@ -22,13 +22,16 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [tab, setTab] = useState('pending_review');
   const [subs, setSubs] = useState<Submission[] | null>(null);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/login');
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user?.role === 'admin') api<Stats>('/api/admin/stats', { auth: true }).then(setStats);
+    if (user?.role === 'admin') {
+      api<Stats>('/api/admin/stats', { auth: true }).then(setStats).catch((e) => setError(e.message));
+    }
   }, [user]);
 
   useEffect(() => {
@@ -36,7 +39,10 @@ export default function AdminDashboard() {
     setSubs(null);
     const status = TABS.find((t) => t.key === tab)?.status;
     const qs = status ? `?status=${status}` : '';
-    api<Submission[]>(`/api/admin/submissions${qs}`, { auth: true }).then(setSubs);
+    setError('');
+    api<Submission[]>(`/api/admin/submissions${qs}`, { auth: true })
+      .then(setSubs)
+      .catch((e) => { setError(e.message || 'Could not load submissions'); setSubs([]); });
   }, [tab, user]);
 
   if (loading || !user) return <Spinner />;
@@ -44,6 +50,7 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-slate-800">Admin Dashboard</h1>
+      {error && <Alert>{error}</Alert>}
 
       {stats && (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
