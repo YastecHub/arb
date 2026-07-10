@@ -6,15 +6,19 @@ import { Alert } from '@/components/ui';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError('');
     setBusy(true);
     try {
       await api('/api/auth/forgot-password', { method: 'POST', body: { email } });
       setSent(true);
+    } catch (err: any) {
+      setError(err.message || 'Password reset is currently unavailable');
     } finally {
       setBusy(false);
     }
@@ -31,6 +35,7 @@ export default function ForgotPasswordPage() {
           </Alert>
         ) : (
           <form onSubmit={onSubmit} className="space-y-4">
+            {error && <Alert>{error}</Alert>}
             <div>
               <label className="label">Email</label>
               <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />

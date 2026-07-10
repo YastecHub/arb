@@ -31,10 +31,6 @@ export async function sendEmail(mail: Mail): Promise<void> {
   console.log(`\n📧 [email:console] To: ${mail.to}\n   Subject: ${mail.subject}\n   ${mail.html.replace(/<[^>]+>/g, ' ').trim()}\n`);
 }
 
-export function verificationEmail(name: string, link: string): Mail['html'] {
-  return `<p>Hi ${name},</p><p>Confirm your ARB ResearchHub account:</p><p><a href="${link}">Verify my email</a></p><p>${link}</p>`;
-}
-
 export function resetEmail(name: string, link: string): Mail['html'] {
   return `<p>Hi ${name},</p><p>Reset your ARB ResearchHub password (valid 1 hour):</p><p><a href="${link}">Reset password</a></p><p>${link}</p>`;
 }

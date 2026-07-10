@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { asyncHandler } from '../../utils/http';
 import { requireAuth, requireRole } from '../../middleware/auth';
+import { ENGINEERING_DEPARTMENTS } from '../../config/departments';
 import * as svc from './admin.service';
 
 const router = Router();
@@ -92,7 +93,7 @@ router.put(
       .object({
         title: z.string().min(3).optional(),
         abstract: z.string().optional(),
-        department: z.string().optional(),
+        department: z.enum(ENGINEERING_DEPARTMENTS).optional(),
         session: z.string().optional(),
         tags: z.array(z.string()).optional(),
       })

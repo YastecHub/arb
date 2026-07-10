@@ -9,8 +9,8 @@ import {
   verifyRefreshToken,
   JwtPayload,
 } from '../../utils/auth';
-import { badRequest, conflict, unauthorized, notFound } from '../../utils/http';
-import { sendEmail, verificationEmail, resetEmail } from '../../lib/email';
+import { badRequest, conflict, unauthorized, notFound, forbidden } from '../../utils/http';
+import { sendEmail, resetEmail } from '../../lib/email';
 
 export interface PublicUser {
   id: string;
@@ -39,49 +39,39 @@ export async function register(input: {
   password: string;
   department: string;
   matricNumber: string;
-}): Promise<{ user: PublicUser; verifyLink: string | null }> {
+}): Promise<{ user: PublicUser }> {
   const email = input.email.toLowerCase().trim();
   const domain = email.split('@')[1];
   if (domain !== env.allowedEmailDomain) {
     throw badRequest(`Registration is restricted to @${env.allowedEmailDomain} email addresses`);
   }
 
-  const existing = await query(`SELECT 1 FROM users WHERE email = $1`, [email]);
-  if (existing.rowCount) throw conflict('An account with this email already exists');
+  const matricNumber = input.matricNumber.trim();
+  const existing = await query<{ email: string; matric_number: string | null }>(
+    `SELECT email, matric_number FROM users
+      WHERE email = $1 OR lower(matric_number) = lower($2)
+      LIMIT 1`,
+    [email, matricNumber]
+  );
+  if (existing.rows[0]?.email === email) throw conflict('An account with this email already exists');
+  if (existing.rows[0]) throw conflict('An account with this matric number already exists');
 
   const passwordHash = await hashPassword(input.password);
-  const verificationToken = randomToken();
-  const isVerified = env.autoVerify;
 
-  const { rows } = await query<PublicUser>(
-    `INSERT INTO users (name, email, password_hash, role, department, matric_number, is_verified, verification_token)
-     VALUES ($1, $2, $3, 'student', $4, $5, $6, $7)
-     RETURNING ${publicCols}`,
-    [input.name.trim(), email, passwordHash, input.department.trim(), input.matricNumber.trim(), isVerified, verificationToken]
-  );
-
-  const verifyLink = `${env.frontendUrl}/verify?token=${verificationToken}`;
-  if (!isVerified) {
-    await sendEmail({
-      to: email,
-      subject: 'Verify your ARB ResearchHub account',
-      html: verificationEmail(input.name, verifyLink),
-    });
-  } else {
-    // eslint-disable-next-line no-console
-    console.log(`\n🔗 [auto-verify ON] ${email} is active. Verify link (informational): ${verifyLink}\n`);
+  let rows: PublicUser[];
+  try {
+    ({ rows } = await query<PublicUser>(
+      `INSERT INTO users (name, email, password_hash, role, department, matric_number, is_verified, verification_token)
+       VALUES ($1, $2, $3, 'student', $4, $5, TRUE, NULL)
+       RETURNING ${publicCols}`,
+      [input.name.trim(), email, passwordHash, input.department, matricNumber]
+    ));
+  } catch (err: any) {
+    if (err?.code === '23505') throw conflict('An account with this email or matric number already exists');
+    throw err;
   }
 
-  return { user: rows[0], verifyLink: env.autoVerify ? null : verifyLink };
-}
-
-export async function verifyEmail(token: string): Promise<void> {
-  const { rowCount } = await query(
-    `UPDATE users SET is_verified = TRUE, verification_token = NULL
-       WHERE verification_token = $1 RETURNING id`,
-    [token]
-  );
-  if (!rowCount) throw badRequest('Invalid or already-used verification link');
+  return { user: rows[0] };
 }
 
 export async function login(emailRaw: string, password: string) {
@@ -117,6 +107,9 @@ export async function me(userId: string): Promise<PublicUser> {
 }
 
 export async function requestPasswordReset(emailRaw: string): Promise<void> {
+  if (!env.email.passwordResetEnabled || !env.email.resendApiKey) {
+    throw forbidden('Password reset is currently unavailable. Please contact an ARB administrator.');
+  }
   const email = emailRaw.toLowerCase().trim();
   const token = randomToken();
   const { rows } = await query<{ name: string }>(

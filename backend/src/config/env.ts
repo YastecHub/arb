@@ -9,23 +9,36 @@ function req(name: string, fallback?: string): string {
   return v;
 }
 
+function requiredInProd(name: string, fallback?: string): string {
+  const value = req(name, fallback);
+  if ((process.env.NODE_ENV ?? 'development') === 'production' && value === fallback) {
+    throw new Error(`Set ${name} for production`);
+  }
+  return value;
+}
+
+function bool(name: string, fallback = false): boolean {
+  const value = process.env[name];
+  if (value === undefined) return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(value.toLowerCase());
+}
+
 export const env = {
   port: parseInt(process.env.PORT ?? '4000', 10),
   nodeEnv: process.env.NODE_ENV ?? 'development',
   isProd: (process.env.NODE_ENV ?? 'development') === 'production',
   frontendUrl: process.env.FRONTEND_URL ?? 'http://localhost:3000',
 
-  databaseUrl: req('DATABASE_URL', 'postgres://arb:arb_password@localhost:5433/researchhub'),
+  databaseUrl: requiredInProd('DATABASE_URL', 'postgres://arb:arb_password@localhost:5433/researchhub'),
 
   jwt: {
-    accessSecret: req('JWT_ACCESS_SECRET', 'dev_access_secret_change_me'),
-    refreshSecret: req('JWT_REFRESH_SECRET', 'dev_refresh_secret_change_me'),
+    accessSecret: requiredInProd('JWT_ACCESS_SECRET', 'dev_access_secret_change_me'),
+    refreshSecret: requiredInProd('JWT_REFRESH_SECRET', 'dev_refresh_secret_change_me'),
     accessTtl: process.env.JWT_ACCESS_TTL ?? '15m',
     refreshTtl: process.env.JWT_REFRESH_TTL ?? '7d',
   },
 
   allowedEmailDomain: process.env.ALLOWED_EMAIL_DOMAIN ?? 'unilag.edu.ng',
-  autoVerify: (process.env.AUTH_AUTO_VERIFY ?? 'false') === 'true',
 
   seedAdmin: {
     email: process.env.SEED_ADMIN_EMAIL ?? 'admin@unilag.edu.ng',
@@ -53,6 +66,7 @@ export const env = {
   email: {
     resendApiKey: process.env.RESEND_API_KEY ?? '',
     from: process.env.EMAIL_FROM ?? 'ARB ResearchHub <no-reply@unilag.edu.ng>',
+    passwordResetEnabled: bool('ENABLE_PASSWORD_RESET', process.env.NODE_ENV !== 'production'),
   },
 
   groq: {
@@ -61,7 +75,8 @@ export const env = {
   },
 
   embedding: {
-    model: process.env.EMBEDDING_MODEL ?? 'Xenova/all-MiniLM-L6-v2',
+    model: process.env.EMBEDDING_MODEL ?? 'hashing-v1',
     dim: parseInt(process.env.EMBEDDING_DIM ?? '384', 10),
+    warmOnStart: bool('WARM_EMBEDDINGS_ON_START', process.env.NODE_ENV !== 'production'),
   },
 } as const;

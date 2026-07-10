@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, EmptyState } from '@/components/ui';
+import { ENGINEERING_DEPARTMENTS } from '@/lib/departments';
 
 export default function PublishedManagement() {
   const { user, loading } = useAuth();
@@ -161,7 +162,11 @@ function EditModal({ paper, onClose, onSaved }: { paper: Submission; onClose: ()
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Department</label>
-              <input className="input" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} />
+              <select className="input bg-white" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })}>
+                {ENGINEERING_DEPARTMENTS.map((department) => (
+                  <option key={department} value={department}>{department}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="label">Session</label>

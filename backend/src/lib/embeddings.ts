@@ -1,27 +1,69 @@
+import crypto from 'crypto';
 import { env } from '../config/env';
 
-// Local sentence-embedding model (MiniLM, 384-dim). Runs in-process — no API key,
-// no external service. Produces the vectors that Groq cannot (Groq serves LLMs only),
-// which we store in pgvector for semantic recall.
-let extractorPromise: Promise<any> | null = null;
+const STOP_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'are',
+  'as',
+  'at',
+  'be',
+  'by',
+  'for',
+  'from',
+  'in',
+  'is',
+  'it',
+  'of',
+  'on',
+  'or',
+  'that',
+  'the',
+  'this',
+  'to',
+  'using',
+  'with',
+]);
 
-async function getExtractor() {
-  if (!extractorPromise) {
-    extractorPromise = (async () => {
-      // @xenova/transformers is ESM-only; load via dynamic import from CommonJS.
-      const { pipeline } = await import('@xenova/transformers');
-      return pipeline('feature-extraction', env.embedding.model);
-    })();
-  }
-  return extractorPromise;
+function tokensFor(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .split(/\s+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 2 && !STOP_WORDS.has(token))
+    .slice(0, 1200);
 }
 
-/** Embed a single text into a normalized 384-dim vector. */
+function hashFeature(feature: string): { index: number; sign: 1 | -1 } {
+  const digest = crypto.createHash('sha256').update(`${env.embedding.model}:${feature}`).digest();
+  const raw = digest.readUInt32BE(0);
+  return { index: raw % env.embedding.dim, sign: digest[4] % 2 === 0 ? 1 : -1 };
+}
+
+function addFeature(vector: number[], feature: string, weight: number) {
+  const { index, sign } = hashFeature(feature);
+  vector[index] += sign * weight;
+}
+
+/** Embed a single text into a normalized vector without a server-side ML bundle. */
 export async function embed(text: string): Promise<number[]> {
-  const extractor = await getExtractor();
-  const clean = text.replace(/\s+/g, ' ').trim().slice(0, 8000);
-  const output = await extractor(clean || ' ', { pooling: 'mean', normalize: true });
-  return Array.from(output.data as Float32Array);
+  const vector = Array.from({ length: env.embedding.dim }, () => 0);
+  const tokens = tokensFor(text.replace(/\s+/g, ' ').trim().slice(0, 8000));
+
+  for (let i = 0; i < tokens.length; i++) {
+    addFeature(vector, tokens[i], 1);
+    if (i + 1 < tokens.length) addFeature(vector, `${tokens[i]} ${tokens[i + 1]}`, 1.4);
+    if (i + 2 < tokens.length) addFeature(vector, `${tokens[i]} ${tokens[i + 1]} ${tokens[i + 2]}`, 1.8);
+  }
+
+  let magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  if (!magnitude) {
+    addFeature(vector, 'empty', 1);
+    magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0));
+  }
+  return vector.map((value) => value / magnitude);
 }
 
 /** Cosine similarity between two vectors (embeddings are already L2-normalized). */
@@ -34,7 +76,5 @@ export function cosineSim(a: number[], b: number[]): number {
 
 /** Warm the model at boot so the first search isn't slow. */
 export function warmEmbeddings(): void {
-  embed('warmup').catch(() => {
-    /* ignore — model downloads lazily on first real use */
-  });
+  void embed('warmup');
 }

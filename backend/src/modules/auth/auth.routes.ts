@@ -3,6 +3,7 @@ import { z } from 'zod';
 import rateLimit from 'express-rate-limit';
 import { asyncHandler } from '../../utils/http';
 import { requireAuth } from '../../middleware/auth';
+import { ENGINEERING_DEPARTMENTS } from '../../config/departments';
 import * as svc from './auth.service';
 
 const router = Router();
@@ -10,11 +11,16 @@ const router = Router();
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 50, standardHeaders: true, legacyHeaders: false });
 
 const registerSchema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  department: z.string().min(2),
-  matricNumber: z.string().min(3),
+  name: z.string().trim().min(2, 'Enter your full name').max(100, 'Name is too long'),
+  email: z.string().trim().email('Enter a valid email address').max(254),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(72, 'Password must be at most 72 characters'),
+  department: z.enum(ENGINEERING_DEPARTMENTS, { errorMap: () => ({ message: 'Select a valid Faculty of Engineering department' }) }),
+  matricNumber: z
+    .string()
+    .trim()
+    .min(3, 'Enter a valid matric number')
+    .max(30, 'Matric number is too long')
+    .regex(/^[A-Za-z0-9][A-Za-z0-9./-]*$/, 'Matric number contains invalid characters'),
 });
 
 router.post(
@@ -27,20 +33,14 @@ router.post(
   })
 );
 
-router.get(
-  '/verify',
-  asyncHandler(async (req, res) => {
-    const token = z.string().min(1).parse(req.query.token);
-    await svc.verifyEmail(token);
-    res.json({ ok: true });
-  })
-);
-
 router.post(
   '/login',
   authLimiter,
   asyncHandler(async (req, res) => {
-    const { email, password } = z.object({ email: z.string().email(), password: z.string() }).parse(req.body);
+    const { email, password } = z.object({
+      email: z.string().trim().email().max(254),
+      password: z.string().min(1).max(72),
+    }).parse(req.body);
     res.json(await svc.login(email, password));
   })
 );
@@ -48,7 +48,7 @@ router.post(
 router.post(
   '/refresh',
   asyncHandler(async (req, res) => {
-    const { refreshToken } = z.object({ refreshToken: z.string() }).parse(req.body);
+    const { refreshToken } = z.object({ refreshToken: z.string().min(1).max(4096) }).parse(req.body);
     res.json(svc.refresh(refreshToken));
   })
 );
@@ -65,7 +65,7 @@ router.post(
   '/forgot-password',
   authLimiter,
   asyncHandler(async (req, res) => {
-    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const { email } = z.object({ email: z.string().trim().email().max(254) }).parse(req.body);
     await svc.requestPasswordReset(email);
     res.json({ ok: true });
   })
@@ -75,7 +75,10 @@ router.post(
   '/reset-password',
   authLimiter,
   asyncHandler(async (req, res) => {
-    const { token, password } = z.object({ token: z.string(), password: z.string().min(8) }).parse(req.body);
+    const { token, password } = z.object({
+      token: z.string().min(1).max(256),
+      password: z.string().min(8).max(72),
+    }).parse(req.body);
     await svc.resetPassword(token, password);
     res.json({ ok: true });
   })

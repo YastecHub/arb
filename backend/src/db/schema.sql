@@ -4,6 +4,7 @@
 -- (portable to any Postgres, including managed/hosted instances). At larger scale this
 -- column can be swapped for pgvector's vector(384) + ivfflat index with no API changes.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- PostgreSQL marks array_to_string as stable, which prevents its direct use in a
 -- generated column even though text-array conversion is deterministic here.
@@ -83,9 +84,18 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Email activation is intentionally disabled. Keep legacy columns for backwards
+-- compatibility, but activate any accounts created by earlier versions.
+UPDATE users
+   SET is_verified = TRUE, verification_token = NULL
+ WHERE is_verified = FALSE OR verification_token IS NOT NULL;
+
 -- ---------- indexes ----------
 CREATE INDEX IF NOT EXISTS idx_submissions_status      ON submissions (status);
 CREATE INDEX IF NOT EXISTS idx_submissions_student     ON submissions (student_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unique_matric_number
+  ON users (lower(matric_number))
+  WHERE matric_number IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_one_active_per_student
   ON submissions (student_id)
   WHERE status IN ('draft', 'pending_review', 'revision_requested');

@@ -119,6 +119,9 @@ async function seedPapers(studentId: string) {
 }
 
 async function main() {
+  if (env.isProd) {
+    throw new Error('Refusing to seed demo data in production. Use npm run bootstrap:admin instead.');
+  }
   console.log('Seeding ARB ResearchHub...');
   await upsertAdmin();
   const studentId = await upsertStudent();
