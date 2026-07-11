@@ -8,6 +8,15 @@ import * as svc from './admin.service';
 const router = Router();
 router.use(requireAuth, requireRole('admin'));
 
+const academicSessionSchema = z
+  .string()
+  .trim()
+  .regex(/^20\d{2}\/20\d{2}$/, 'Academic session must use the format 2024/2025')
+  .refine((value) => {
+    const [start, end] = value.split('/').map(Number);
+    return end === start + 1;
+  }, 'Academic session must be one academic year, such as 2024/2025');
+
 const statusSchema = z.enum([
   'draft',
   'pending_review',
@@ -94,7 +103,7 @@ router.put(
         title: z.string().min(3).optional(),
         abstract: z.string().optional(),
         department: z.enum(ENGINEERING_DEPARTMENTS).optional(),
-        session: z.string().optional(),
+        session: academicSessionSchema.optional(),
         tags: z.array(z.string()).optional(),
       })
       .parse(req.body);

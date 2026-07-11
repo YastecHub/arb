@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
+import AppShell from '@/components/AppShell';
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -71,25 +72,42 @@ export default function ReviewPage() {
     }
   }
 
-  if (loading) return <Spinner label="Loading submission…" />;
+  if (loading) {
+    return (
+      <AppShell title="Review submission" subtitle="Loading the submitted paper.">
+        <Spinner label="Loading submission…" />
+      </AppShell>
+    );
+  }
   if (!sub) {
     return error ? (
-      <div className="space-y-4"><Alert>{error}</Alert><Link href="/admin" className="btn-outline">← Back to review desk</Link></div>
-    ) : <Spinner label="Loading submission…" />;
+      <AppShell
+        title="Review submission"
+        subtitle="The requested submission could not be loaded."
+        actions={<Link href="/admin" className="btn-outline">← Back to review desk</Link>}
+      >
+        <Alert>{error}</Alert>
+      </AppShell>
+    ) : (
+      <AppShell title="Review submission" subtitle="Loading the submitted paper.">
+        <Spinner label="Loading submission…" />
+      </AppShell>
+    );
   }
 
   const canDecide = sub.status === 'pending_review';
 
   return (
+    <AppShell
+      title="Review submission"
+      subtitle="Read the paper details, view the PDF, and record the board decision."
+      actions={<Link href="/admin" className="btn-outline">← Back to review desk</Link>}
+    >
     <div className="space-y-6">
-      <Link href="/admin" className="text-sm text-brand-600 hover:underline">
-        ← Back to review desk
-      </Link>
-
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         {/* Document + metadata */}
         <div className="space-y-4">
-          <div className="card p-6">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold text-slate-800">{sub.title}</h1>
               <StatusBadge status={sub.status} />
@@ -114,7 +132,7 @@ export default function ReviewPage() {
           </div>
 
           {sub.has_pdf ? (
-            <div className="card overflow-hidden">
+            <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
                 <span className="text-sm font-semibold text-slate-600">Document</span>
                 {pdfUrl && (
@@ -132,7 +150,7 @@ export default function ReviewPage() {
 
         {/* Decision panel */}
         <aside className="space-y-4">
-          <div className="card space-y-3 p-5">
+          <div className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="font-semibold text-slate-800">Review decision</h2>
             {error && <Alert>{error}</Alert>}
 
@@ -184,5 +202,6 @@ export default function ReviewPage() {
         </aside>
       </div>
     </div>
+    </AppShell>
   );
 }

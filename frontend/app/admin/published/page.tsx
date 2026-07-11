@@ -7,6 +7,8 @@ import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, EmptyState } from '@/components/ui';
 import { ENGINEERING_DEPARTMENTS } from '@/lib/departments';
+import { ACADEMIC_SESSIONS } from '@/lib/academicSessions';
+import AppShell from '@/components/AppShell';
 
 export default function PublishedManagement() {
   const { user, loading } = useAuth();
@@ -50,18 +52,30 @@ export default function PublishedManagement() {
     }
   }
 
-  if (loading || !items) return <Spinner label="Loading papers…" />;
+  if (loading || !items) {
+    return (
+      <AppShell title="Published papers" subtitle="Loading the published paper collection.">
+        <Spinner label="Loading papers…" />
+      </AppShell>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Published papers</h1>
-          <p className="text-sm text-slate-500">Edit metadata, unpublish, or re-publish papers.</p>
-        </div>
+    <AppShell
+      title="Published papers"
+      subtitle="Review published and unpublished papers, update metadata, and control public visibility."
+      actions={
         <Link href="/admin" className="btn-outline">
           ← Review desk
         </Link>
+      }
+    >
+      <div className="space-y-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Paper collection</h2>
+          <p className="text-sm text-slate-500">Edit metadata, unpublish, or re-publish papers.</p>
+        </div>
       </div>
 
       {error && <Alert>{error}</Alert>}
@@ -71,7 +85,7 @@ export default function PublishedManagement() {
       ) : (
         <div className="space-y-3">
           {items.map((s) => (
-            <div key={s.id} className="card p-4">
+            <div key={s.id} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -108,7 +122,8 @@ export default function PublishedManagement() {
           }}
         />
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
 
@@ -134,7 +149,7 @@ function EditModal({ paper, onClose, onSaved }: { paper: Submission; onClose: ()
           title: form.title,
           abstract: form.abstract,
           department: form.department,
-          session: form.session,
+          session: form.session || undefined,
           tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
         },
       });
@@ -170,7 +185,12 @@ function EditModal({ paper, onClose, onSaved }: { paper: Submission; onClose: ()
             </div>
             <div>
               <label className="label">Session</label>
-              <input className="input" value={form.session} onChange={(e) => setForm({ ...form, session: e.target.value })} />
+              <select className="input bg-white" value={form.session} onChange={(e) => setForm({ ...form, session: e.target.value })}>
+                <option value="">Select academic session</option>
+                {ACADEMIC_SESSIONS.map((session) => (
+                  <option key={session} value={session}>{session}</option>
+                ))}
+              </select>
             </div>
           </div>
           <div>
