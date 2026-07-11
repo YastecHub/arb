@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import FloatingChatButton from '@/components/FloatingChatButton';
 import HomeRedirect from '@/components/HomeRedirect';
 import Footer from '@/components/Footer';
+import { AppFrame } from '@/components/AppShell';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://arb-k7rw.vercel.app';
 const siteName = 'ULES ARB ResearchHub';
@@ -82,7 +83,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <HomeRedirect />
           <Navbar />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
+            <AppFrame>{children}</AppFrame>
+          </main>
           <FloatingChatButton />
           <Footer />
         </AuthProvider>

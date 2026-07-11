@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -24,6 +24,17 @@ interface NavItem {
   icon: any;
 }
 
+interface ShellConfig {
+  title: string;
+  subtitle?: string;
+  actions?: React.ReactNode;
+}
+
+interface ShellContextValue {
+  active: boolean;
+  setConfig: (config: ShellConfig) => void;
+}
+
 const studentNav: NavItem[] = [
   { href: '/dashboard', label: 'Overview', icon: DashboardSquare01Icon },
   { href: '/submit', label: 'Submit research', icon: FileUploadIcon },
@@ -38,13 +49,18 @@ const adminNav: NavItem[] = [
   { href: '/assistant', label: 'Ask Ada Torque', icon: AiChat02Icon },
 ];
 
-export default function AppShell({ children, title, subtitle, actions }: { children: React.ReactNode; title: string; subtitle?: string; actions?: React.ReactNode }) {
+const APP_PREFIXES = ['/dashboard', '/submit', '/library', '/assistant', '/admin'];
+const ShellContext = createContext<ShellContextValue | null>(null);
+
+export function AppFrame({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [config, setConfig] = useState<ShellConfig>({ title: 'ResearchHub' });
   const nav = user?.role === 'admin' ? adminNav : studentNav;
+  const active = Boolean(user && APP_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)));
 
   useEffect(() => {
     const saved = localStorage.getItem('arb_sidebar_collapsed');
@@ -59,70 +75,94 @@ export default function AppShell({ children, title, subtitle, actions }: { child
     setMobileOpen(false);
   }, [pathname]);
 
+  const contextValue = useMemo(() => ({ active, setConfig }), [active]);
+
   function doLogout() {
     logout();
     router.push('/');
   }
 
+  if (!active) {
+    return <ShellContext.Provider value={contextValue}>{children}</ShellContext.Provider>;
+  }
+
   return (
-    <div className="relative left-1/2 -my-8 w-screen -translate-x-1/2 bg-[#f4f1e8]">
-      <div className="mx-auto flex min-h-[calc(100vh-8.6rem)] max-w-[92rem]">
-        <Sidebar
-          nav={nav}
-          pathname={pathname}
-          collapsed={collapsed}
-          onCollapse={() => setCollapsed((value) => !value)}
-          onLogout={doLogout}
-          user={user}
-        />
+    <ShellContext.Provider value={contextValue}>
+      <div className="relative left-1/2 -my-8 w-screen -translate-x-1/2 bg-[#f4f1e8]">
+        <div className="mx-auto flex min-h-[calc(100vh-8.6rem)] max-w-[92rem]">
+          <Sidebar
+            nav={nav}
+            pathname={pathname}
+            collapsed={collapsed}
+            onCollapse={() => setCollapsed((value) => !value)}
+            onLogout={doLogout}
+            user={user}
+          />
 
-        {mobileOpen && (
-          <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)}>
-            <div className="h-full w-[19rem] max-w-[86vw] bg-[#071826] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
-              <div className="mb-5 flex items-center justify-between">
-                <Brand compact={false} />
-                <button className="rounded-xl border border-white/10 p-2 hover:bg-white/10" onClick={() => setMobileOpen(false)} aria-label="Close menu">
-                  <Icon icon={Cancel01Icon} />
-                </button>
+          {mobileOpen && (
+            <div className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm lg:hidden" onClick={() => setMobileOpen(false)}>
+              <div className="flex h-full w-[19rem] max-w-[86vw] flex-col bg-[#071826] p-4 text-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+                <div className="mb-5 flex items-center justify-between">
+                  <Brand compact={false} />
+                  <button className="rounded-xl border border-white/10 p-2 hover:bg-white/10" onClick={() => setMobileOpen(false)} aria-label="Close menu">
+                    <Icon icon={Cancel01Icon} />
+                  </button>
+                </div>
+                <SidebarNav nav={nav} pathname={pathname} collapsed={false} />
+                <UserPanel user={user} collapsed={false} onLogout={doLogout} />
               </div>
-              <SidebarNav nav={nav} pathname={pathname} collapsed={false} />
-              <UserPanel user={user} collapsed={false} onLogout={doLogout} />
             </div>
-          </div>
-        )}
+          )}
 
-        <section className="min-w-0 flex-1 px-4 py-5 sm:px-5 lg:px-6">
-          <div className="mb-5 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur md:p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="flex min-w-0 items-start gap-3">
-                <button
-                  className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
-                  onClick={() => setMobileOpen(true)}
-                  aria-label="Open research menu"
-                >
-                  <Icon icon={Menu01Icon} />
-                </button>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">ResearchHub</p>
-                  <h1 className="mt-1 text-2xl font-black tracking-tight text-[#071826] md:text-3xl">{title}</h1>
-                  {subtitle && <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">{subtitle}</p>}
+          <section className="min-w-0 flex-1 px-4 py-5 sm:px-5 lg:px-6">
+            <div className="mb-5 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur md:p-5">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <button
+                    className="mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm lg:hidden"
+                    onClick={() => setMobileOpen(true)}
+                    aria-label="Open research menu"
+                  >
+                    <Icon icon={Menu01Icon} />
+                  </button>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">ResearchHub</p>
+                    <h1 className="mt-1 text-2xl font-black tracking-tight text-[#071826] md:text-3xl">{config.title}</h1>
+                    {config.subtitle && <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-500">{config.subtitle}</p>}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {config.actions}
+                  <Link href="/assistant" className="btn-outline">
+                    <Icon icon={AiChat02Icon} className="h-4 w-4" />
+                    Ask Ada
+                  </Link>
                 </div>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {actions}
-                <Link href="/assistant" className="btn-outline">
-                  <Icon icon={AiChat02Icon} className="h-4 w-4" />
-                  Ask Ada
-                </Link>
-              </div>
             </div>
-          </div>
 
-          {children}
-        </section>
+            {children}
+          </section>
+        </div>
       </div>
-    </div>
+    </ShellContext.Provider>
   );
+}
+
+export default function AppShell({ children, title, subtitle, actions }: { children: React.ReactNode; title: string; subtitle?: string; actions?: React.ReactNode }) {
+  const context = useContext(ShellContext);
+
+  useEffect(() => {
+    if (context?.active) {
+      context.setConfig({ title, subtitle, actions });
+    }
+    // `actions` is often JSX created inline by pages; depending on it can cause
+    // repeated shell updates during route renders. Title/subtitle changes are
+    // enough to refresh the header when navigating between pages.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, title, subtitle]);
+
+  return <>{children}</>;
 }
 
 function Sidebar({ nav, pathname, collapsed, onCollapse, onLogout, user }: { nav: NavItem[]; pathname: string; collapsed: boolean; onCollapse: () => void; onLogout: () => void; user: any }) {

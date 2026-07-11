@@ -94,7 +94,7 @@ function SubmitInner() {
     }
   }
 
-  if (loading || !ready) return <AppShell title="Submit research" subtitle="Loading your submission form."><Spinner label="Loading submission form…" /></AppShell>;
+  if (loading || !ready) return <AppShell title="Submit research" subtitle="Loading your submission form."><SubmitSkeleton /></AppShell>;
   if (loadFailed) {
     return (
       <AppShell title="Submit research" subtitle="Prepare and send your research paper for ARB review.">
@@ -108,7 +108,7 @@ function SubmitInner() {
       title={editId ? 'Edit submission' : 'Submit research'}
       subtitle="Enter the paper details, attach the PDF, and send it to the Academic & Research Board for review."
     >
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="mx-auto max-w-4xl">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -197,17 +197,38 @@ function SubmitInner() {
             </div>
           </div>
         </form>
-
-        <aside className="h-fit rounded-3xl border border-slate-200 bg-[#071826] p-5 text-white shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-300">Before you submit</p>
-          <div className="mt-4 space-y-4 text-sm leading-6 text-slate-300">
-            <p>Confirm that the title, abstract, academic session, and PDF are correct.</p>
-            <p>Use clear research areas so the paper can be found easily after publication.</p>
-            <p>Drafts stay private. Papers submitted for review are sent to ARB reviewers.</p>
-          </div>
-        </aside>
       </div>
     </AppShell>
+  );
+}
+
+function SubmitSkeleton() {
+  return (
+    <div className="mx-auto max-w-4xl overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-gradient-to-r from-white to-amber-50/70 px-5 py-4">
+        <div className="h-3 w-44 animate-pulse rounded-full bg-amber-100" />
+        <div className="mt-3 h-6 w-64 animate-pulse rounded-full bg-slate-200" />
+      </div>
+      <div className="space-y-5 p-5 md:p-6">
+        <div>
+          <div className="mb-2 h-3 w-24 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-12 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+        <div>
+          <div className="mb-2 h-3 w-20 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-40 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+          <div className="h-20 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+        <div className="h-28 animate-pulse rounded-2xl bg-slate-100" />
+        <div className="flex gap-2">
+          <div className="h-11 w-36 animate-pulse rounded-xl bg-amber-100" />
+          <div className="h-11 w-28 animate-pulse rounded-xl bg-slate-100" />
+        </div>
+      </div>
+    </div>
   );
 }
 

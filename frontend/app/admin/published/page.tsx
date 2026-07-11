@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission } from '@/lib/types';
-import { StatusBadge, Spinner, Alert, EmptyState } from '@/components/ui';
+import { StatusBadge, Alert, EmptyState } from '@/components/ui';
 import { ENGINEERING_DEPARTMENTS } from '@/lib/departments';
 import { ACADEMIC_SESSIONS } from '@/lib/academicSessions';
 import AppShell from '@/components/AppShell';
@@ -55,7 +55,7 @@ export default function PublishedManagement() {
   if (loading || !items) {
     return (
       <AppShell title="Published papers" subtitle="Loading the published paper collection.">
-        <Spinner label="Loading papers…" />
+        <PublishedSkeleton />
       </AppShell>
     );
   }
@@ -124,6 +124,33 @@ export default function PublishedManagement() {
       )}
       </div>
     </AppShell>
+  );
+}
+
+function PublishedSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="h-6 w-48 animate-pulse rounded-full bg-slate-200" />
+        <div className="mt-3 h-3 w-80 max-w-full animate-pulse rounded-full bg-slate-100" />
+      </div>
+      <div className="space-y-3">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="h-5 w-3/5 animate-pulse rounded-full bg-slate-200" />
+                <div className="mt-3 h-3 w-2/5 animate-pulse rounded-full bg-slate-100" />
+              </div>
+              <div className="flex gap-2">
+                <div className="h-10 w-20 animate-pulse rounded-xl bg-slate-100" />
+                <div className="h-10 w-28 animate-pulse rounded-xl bg-slate-100" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
