@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import AppShell from '@/components/AppShell';
-import { api, apiUpload } from '@/lib/api';
+import { api, apiBlobUrl, apiUpload } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission, SubmissionThreadEvent } from '@/lib/types';
 import { Alert, StatusBadge, Tag } from '@/components/ui';
@@ -75,6 +75,18 @@ export default function StudentSubmissionThreadPage() {
     }
   }
 
+  async function openAttachment(event: SubmissionThreadEvent) {
+    if (!submission) return;
+    setError('');
+    try {
+      const url = await apiBlobUrl(`/api/submissions/${submission.id}/thread/${event.id}/download`);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      setError(err.message || 'Could not open the attached PDF');
+    }
+  }
+
   if (loading || !submission) {
     return (
       <AppShell title="Review thread" subtitle="Loading the review discussion.">
@@ -114,6 +126,7 @@ export default function StudentSubmissionThreadPage() {
           <ReviewThread
             events={events}
             viewerRole="student"
+            onOpenAttachment={openAttachment}
             composer={
               canResubmit ? (
                 <RevisionComposer

@@ -52,6 +52,16 @@ router.get(
 );
 
 router.get(
+  '/submissions/:id/thread/:eventId/download',
+  asyncHandler(async (req, res) => {
+    const { buffer, filename } = await svc.downloadThreadPdf(req.params.id, req.params.eventId);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${filename}"`);
+    res.send(buffer);
+  })
+);
+
+router.get(
   '/submissions/:id',
   asyncHandler(async (req, res) => {
     res.json(await svc.getSubmission(req.params.id));

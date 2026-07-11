@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS submissions (
   tags          TEXT[] NOT NULL DEFAULT '{}',
   pdf_key       TEXT,                        -- storage object key
   pdf_url       TEXT,                        -- public/served URL
+  pdf_name      TEXT,                        -- original uploaded filename
   status        submission_status NOT NULL DEFAULT 'draft',
   review_comment TEXT,
   full_text     TEXT NOT NULL DEFAULT '',
@@ -105,8 +106,12 @@ CREATE TABLE IF NOT EXISTS submission_thread_events (
   body          TEXT,
   pdf_key       TEXT,
   pdf_url       TEXT,
+  pdf_name      TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS pdf_name TEXT;
+ALTER TABLE submission_thread_events ADD COLUMN IF NOT EXISTS pdf_name TEXT;
 
 -- Email activation is intentionally disabled. Keep legacy columns for backwards
 -- compatibility, but activate any accounts created by earlier versions.
@@ -128,8 +133,8 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user      ON notifications (user_id
 CREATE INDEX IF NOT EXISTS idx_submission_thread_events_submission
   ON submission_thread_events (submission_id, created_at);
 
-INSERT INTO submission_thread_events (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url, created_at)
-SELECT s.id, s.student_id, 'student', 'submitted', 'Paper submitted for review.', s.pdf_key, s.pdf_url, s.updated_at
+INSERT INTO submission_thread_events (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url, pdf_name, created_at)
+SELECT s.id, s.student_id, 'student', 'submitted', 'Paper submitted for review.', s.pdf_key, s.pdf_url, s.pdf_name, s.updated_at
   FROM submissions s
  WHERE s.status IN ('pending_review', 'revision_requested', 'published', 'rejected', 'unpublished')
    AND NOT EXISTS (

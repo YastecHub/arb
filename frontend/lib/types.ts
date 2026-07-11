@@ -55,6 +55,7 @@ export interface SubmissionThreadEvent {
   event_type: ThreadEventType;
   body: string | null;
   has_pdf: boolean;
+  pdf_name: string | null;
   actor_name: string | null;
   actor_email: string | null;
   created_at: string;

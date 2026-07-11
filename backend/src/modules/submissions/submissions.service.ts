@@ -33,6 +33,11 @@ export async function listMine(studentId: string) {
   return rows;
 }
 
+function safePdfName(name: string | null | undefined, fallbackTitle = 'paper') {
+  const cleaned = (name || `${fallbackTitle}.pdf`).replace(/[/\\?%*:|"<>]/g, '_').trim();
+  return cleaned.toLowerCase().endsWith('.pdf') ? cleaned : `${cleaned}.pdf`;
+}
+
 async function getOwnRecord(studentId: string, id: string) {
   const { rows } = await query(`SELECT * FROM submissions WHERE id = $1 AND student_id = $2`, [id, studentId]);
   if (!rows[0]) throw notFound('Submission not found');
@@ -52,14 +57,14 @@ export async function getOwn(studentId: string, id: string) {
 }
 
 export async function downloadOwn(studentId: string, id: string): Promise<{ buffer: Buffer; filename: string }> {
-  const { rows } = await query<{ pdf_key: string | null; title: string }>(
-    `SELECT pdf_key, title FROM submissions WHERE id = $1 AND student_id = $2`,
+  const { rows } = await query<{ pdf_key: string | null; title: string; pdf_name: string | null }>(
+    `SELECT pdf_key, title, pdf_name FROM submissions WHERE id = $1 AND student_id = $2`,
     [id, studentId]
   );
   if (!rows[0] || !rows[0].pdf_key) throw notFound('Submission PDF not found');
   return {
     buffer: await storage.get(rows[0].pdf_key),
-    filename: `${rows[0].title.replace(/[^a-z0-9]+/gi, '_').slice(0, 60)}.pdf`,
+    filename: safePdfName(rows[0].pdf_name, rows[0].title.replace(/[^a-z0-9]+/gi, '_').slice(0, 60)),
   };
 }
 
@@ -76,11 +81,12 @@ async function addThreadEvent(input: {
   body?: string | null;
   pdfKey?: string | null;
   pdfUrl?: string | null;
+  pdfName?: string | null;
 }) {
   await query(
     `INSERT INTO submission_thread_events
-       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url, pdf_name)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [
       input.submissionId,
       input.actorId ?? null,
@@ -89,6 +95,7 @@ async function addThreadEvent(input: {
       input.body ?? null,
       input.pdfKey ?? null,
       input.pdfUrl ?? null,
+      input.pdfName ?? null,
     ]
   );
 }
@@ -97,7 +104,7 @@ export async function listThread(studentId: string, id: string) {
   await getOwnRecord(studentId, id);
   const { rows } = await query(
     `SELECT e.id, e.submission_id, e.actor_id, e.actor_role, e.event_type, e.body,
-            (e.pdf_key IS NOT NULL) AS has_pdf, e.created_at,
+            (e.pdf_key IS NOT NULL) AS has_pdf, e.pdf_name, e.created_at,
             u.name AS actor_name, u.email AS actor_email
        FROM submission_thread_events e
        LEFT JOIN users u ON u.id = e.actor_id
@@ -106,6 +113,22 @@ export async function listThread(studentId: string, id: string) {
     [id]
   );
   return rows;
+}
+
+export async function downloadThreadPdf(studentId: string, id: string, eventId: string): Promise<{ buffer: Buffer; filename: string }> {
+  await getOwnRecord(studentId, id);
+  const { rows } = await query<{ pdf_key: string | null; pdf_name: string | null; title: string }>(
+    `SELECT e.pdf_key, e.pdf_name, s.title
+       FROM submission_thread_events e
+       JOIN submissions s ON s.id = e.submission_id
+      WHERE e.id = $1 AND e.submission_id = $2`,
+    [eventId, id]
+  );
+  if (!rows[0]?.pdf_key) throw notFound('Thread PDF not found');
+  return {
+    buffer: await storage.get(rows[0].pdf_key),
+    filename: safePdfName(rows[0].pdf_name, rows[0].title),
+  };
 }
 
 /** Create a new submission (draft or submitted). Enforces the one-active-submission rule. */
@@ -138,8 +161,8 @@ export async function create(
   try {
     ({ rows } = await query<{ id: string }>(
       `INSERT INTO submissions
-         (student_id, title, abstract, author_name, matric_number, department, session, tags, pdf_key, pdf_url, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+         (student_id, title, abstract, author_name, matric_number, department, session, tags, pdf_key, pdf_url, pdf_name, status)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
        RETURNING id`,
       [
         studentId,
@@ -152,6 +175,7 @@ export async function create(
         input.tags ?? [],
         pdf.key,
         pdf.url,
+        file?.originalname ?? null,
         status,
       ]
     ));
@@ -171,6 +195,7 @@ export async function create(
       body: 'Paper submitted for review.',
       pdfKey: pdf.key,
       pdfUrl: pdf.url,
+      pdfName: file?.originalname ?? null,
     });
     await notifyAllAdmins('submission_new', 'A new project has been submitted for review.', '/admin');
   }
@@ -205,7 +230,7 @@ export async function update(
         abstract = COALESCE($4, abstract),
         session = COALESCE($5, session),
         tags = COALESCE($6, tags),
-        pdf_key = $7, pdf_url = $8,
+        pdf_key = $7, pdf_url = $8, pdf_name = COALESCE($10, pdf_name),
         full_text = CASE WHEN $9::boolean THEN '' ELSE full_text END,
         embedding = CASE WHEN $9::boolean THEN NULL ELSE embedding END,
         index_status = CASE WHEN $9::boolean THEN 'none' ELSE index_status END,
@@ -220,7 +245,8 @@ export async function update(
       input.tags ?? null,
       pdfKey,
       pdfUrl,
-      Boolean(file),
+        Boolean(file),
+        file?.originalname ?? null,
     ]
   );
   if (oldPdfKey) await storage.remove(oldPdfKey).catch(() => {});
@@ -250,6 +276,7 @@ export async function submitForReview(studentId: string, id: string) {
     body: current.status === 'revision_requested' ? 'Revised paper submitted for review.' : 'Paper submitted for review.',
     pdfKey: current.pdf_key,
     pdfUrl: current.pdf_url,
+    pdfName: current.pdf_name,
   });
   await notifyAllAdmins('submission_new', 'A new project has been submitted for review.', '/admin');
   return getOwn(studentId, rows[0].id);
@@ -282,13 +309,14 @@ export async function resubmitRevision(
         status = 'pending_review',
         pdf_key = $3,
         pdf_url = $4,
+        pdf_name = COALESCE($6, pdf_name),
         full_text = CASE WHEN $5::boolean THEN '' ELSE full_text END,
         embedding = CASE WHEN $5::boolean THEN NULL ELSE embedding END,
         index_status = CASE WHEN $5::boolean THEN 'none' ELSE index_status END,
         updated_at = now()
       WHERE id = $1 AND student_id = $2 AND status = 'revision_requested'
       RETURNING id`,
-    [id, studentId, pdfKey, pdfUrl, Boolean(file)]
+    [id, studentId, pdfKey, pdfUrl, Boolean(file), file?.originalname ?? null]
   );
   if (!rows[0]) throw conflict('This submission is no longer awaiting revision');
   if (oldPdfKey) await storage.remove(oldPdfKey).catch(() => {});
@@ -300,6 +328,7 @@ export async function resubmitRevision(
     body: note?.trim() || 'Revised paper submitted for review.',
     pdfKey,
     pdfUrl,
+    pdfName: file?.originalname ?? current.pdf_name,
   });
   await notifyAllAdmins('submission_new', 'A revised paper has been resubmitted for review.', `/admin/submissions/${id}`);
   return getOwn(studentId, id);

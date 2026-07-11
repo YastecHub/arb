@@ -10,6 +10,11 @@ async function getSubmissionOrThrow(id: string) {
   return rows[0];
 }
 
+function safePdfName(name: string | null | undefined, fallbackTitle = 'paper') {
+  const cleaned = (name || `${fallbackTitle}.pdf`).replace(/[/\\?%*:|"<>]/g, '_').trim();
+  return cleaned.toLowerCase().endsWith('.pdf') ? cleaned : `${cleaned}.pdf`;
+}
+
 async function addThreadEvent(input: {
   submissionId: string;
   actorId?: string | null;
@@ -18,11 +23,12 @@ async function addThreadEvent(input: {
   body?: string | null;
   pdfKey?: string | null;
   pdfUrl?: string | null;
+  pdfName?: string | null;
 }) {
   await query(
     `INSERT INTO submission_thread_events
-       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url)
-     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url, pdf_name)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
     [
       input.submissionId,
       input.actorId ?? null,
@@ -31,6 +37,7 @@ async function addThreadEvent(input: {
       input.body ?? null,
       input.pdfKey ?? null,
       input.pdfUrl ?? null,
+      input.pdfName ?? null,
     ]
   );
 }
@@ -39,7 +46,7 @@ export async function listThread(id: string) {
   await getSubmissionOrThrow(id);
   const { rows } = await query(
     `SELECT e.id, e.submission_id, e.actor_id, e.actor_role, e.event_type, e.body,
-            (e.pdf_key IS NOT NULL) AS has_pdf, e.created_at,
+            (e.pdf_key IS NOT NULL) AS has_pdf, e.pdf_name, e.created_at,
             u.name AS actor_name, u.email AS actor_email
        FROM submission_thread_events e
        LEFT JOIN users u ON u.id = e.actor_id
@@ -48,6 +55,22 @@ export async function listThread(id: string) {
     [id]
   );
   return rows;
+}
+
+export async function downloadThreadPdf(id: string, eventId: string): Promise<{ buffer: Buffer; filename: string }> {
+  await getSubmissionOrThrow(id);
+  const { rows } = await query<{ pdf_key: string | null; pdf_name: string | null; title: string }>(
+    `SELECT e.pdf_key, e.pdf_name, s.title
+       FROM submission_thread_events e
+       JOIN submissions s ON s.id = e.submission_id
+      WHERE e.id = $1 AND e.submission_id = $2`,
+    [eventId, id]
+  );
+  if (!rows[0]?.pdf_key) throw notFound('Thread PDF not found');
+  return {
+    buffer: await storage.get(rows[0].pdf_key),
+    filename: safePdfName(rows[0].pdf_name, rows[0].title),
+  };
 }
 
 export async function listSubmissions(status?: string) {
@@ -91,7 +114,7 @@ export async function downloadSubmission(id: string): Promise<{ buffer: Buffer; 
   if (!sub.pdf_key) throw notFound('Submission PDF not found');
   return {
     buffer: await storage.get(sub.pdf_key),
-    filename: `${sub.title.replace(/[^a-z0-9]+/gi, '_').slice(0, 60)}.pdf`,
+    filename: safePdfName(sub.pdf_name, sub.title.replace(/[^a-z0-9]+/gi, '_').slice(0, 60)),
   };
 }
 

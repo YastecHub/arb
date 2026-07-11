@@ -20,6 +20,7 @@ export default function ReviewPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [documentOpen, setDocumentOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/login');
@@ -76,6 +77,17 @@ export default function ReviewPage() {
       setError(err.message || 'Action failed');
     } finally {
       setBusy('');
+    }
+  }
+
+  async function openAttachment(event: SubmissionThreadEvent) {
+    setError('');
+    try {
+      const url = await apiBlobUrl(`/api/admin/submissions/${id}/thread/${event.id}/download`);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err: any) {
+      setError(err.message || 'Could not open the attached PDF');
     }
   }
 
@@ -138,6 +150,7 @@ export default function ReviewPage() {
           <ReviewThread
             events={events}
             viewerRole="admin"
+            onOpenAttachment={openAttachment}
             composer={
               <AdminDecisionComposer
                 status={sub.status}
@@ -153,15 +166,22 @@ export default function ReviewPage() {
 
           {sub.has_pdf ? (
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
-                <span className="text-sm font-semibold text-slate-600">Document</span>
-                {pdfUrl && (
-                  <a href={pdfUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-600 hover:underline">
-                    Open in new tab
-                  </a>
-                )}
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+                <button type="button" onClick={() => setDocumentOpen((value) => !value)} className="text-left text-sm font-semibold text-slate-700">
+                  {documentOpen ? 'Hide document preview' : 'Show document preview'}
+                </button>
+                <div className="flex items-center gap-3">
+                  {pdfUrl && (
+                    <a href={pdfUrl} target="_blank" rel="noreferrer" className="text-sm text-brand-600 hover:underline">
+                      Open in new tab
+                    </a>
+                  )}
+                  <button type="button" onClick={() => setDocumentOpen((value) => !value)} className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
+                    {documentOpen ? 'Collapse' : 'Expand'}
+                  </button>
+                </div>
               </div>
-              {pdfUrl ? <iframe src={pdfUrl} title="PDF" className="h-[70vh] w-full" /> : <Spinner label="Loading PDF…" />}
+              {documentOpen && (pdfUrl ? <iframe src={pdfUrl} title="PDF" className="h-[70vh] w-full" /> : <div className="p-4"><Spinner label="Loading PDF…" /></div>)}
             </div>
           ) : (
             <Alert kind="info">No PDF was attached to this submission.</Alert>

@@ -39,10 +39,12 @@ export function ReviewThread({
   events,
   viewerRole,
   composer,
+  onOpenAttachment,
 }: {
   events: SubmissionThreadEvent[];
   viewerRole: 'student' | 'admin';
   composer?: React.ReactNode;
+  onOpenAttachment?: (event: SubmissionThreadEvent) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -69,6 +71,7 @@ export function ReviewThread({
               key={event.id}
               event={event}
               viewerRole={viewerRole}
+              onOpenAttachment={onOpenAttachment}
               showDate={index === 0 || dayKey(events[index - 1].created_at) !== dayKey(event.created_at)}
             />
           ))
@@ -79,7 +82,17 @@ export function ReviewThread({
   );
 }
 
-function ThreadBubble({ event, viewerRole, showDate }: { event: SubmissionThreadEvent; viewerRole: 'student' | 'admin'; showDate: boolean }) {
+function ThreadBubble({
+  event,
+  viewerRole,
+  showDate,
+  onOpenAttachment,
+}: {
+  event: SubmissionThreadEvent;
+  viewerRole: 'student' | 'admin';
+  showDate: boolean;
+  onOpenAttachment?: (event: SubmissionThreadEvent) => void;
+}) {
   const mine = event.actor_role === viewerRole;
   const system = ['approved', 'rejected', 'unpublished', 'republished'].includes(event.event_type);
   const author = event.actor_name || (event.actor_role === 'admin' ? 'ARB reviewer' : event.actor_role === 'student' ? 'Student' : 'System');
@@ -125,10 +138,16 @@ function ThreadBubble({ event, viewerRole, showDate }: { event: SubmissionThread
             </div>
             {event.body && <p className="whitespace-pre-line text-sm leading-6">{event.body}</p>}
             {event.has_pdf && (
-              <div className={`mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-semibold ${mine ? 'bg-white/10 text-white' : 'bg-white text-slate-700'}`}>
+              <button
+                type="button"
+                onClick={() => onOpenAttachment?.(event)}
+                className={`mt-3 flex max-w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold transition hover:scale-[1.01] ${
+                  mine ? 'bg-white/10 text-white hover:bg-white/15' : 'bg-white text-slate-700 hover:bg-slate-50'
+                }`}
+              >
                 <Icon icon={FileAttachmentIcon} className="h-4 w-4" />
-                PDF attached
-              </div>
+                <span className="truncate">{event.pdf_name || 'Attached PDF'}</span>
+              </button>
             )}
           </div>
         </div>
