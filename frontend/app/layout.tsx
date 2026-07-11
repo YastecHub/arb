@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { AuthProvider } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 import FloatingChatButton from '@/components/FloatingChatButton';
+import HomeRedirect from '@/components/HomeRedirect';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://arb-k7rw.vercel.app';
 const siteName = 'ULES ARB ResearchHub';
@@ -78,6 +79,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className="flex min-h-screen flex-col">
         <AuthProvider>
+          <HomeRedirect />
           <Navbar />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
           <FloatingChatButton />

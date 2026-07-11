@@ -16,7 +16,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { Submission, SubmissionStatus } from '@/lib/types';
-import { StatusBadge, Spinner, Alert, EmptyState, Tag } from '@/components/ui';
+import { StatusBadge, Alert, EmptyState, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import AppShell from '@/components/AppShell';
 import { Icon } from '@/components/icons';
@@ -81,7 +81,7 @@ export default function StudentDashboard() {
     };
   }, [subs]);
 
-  if (loading || !subs) return <Spinner label="Loading your workspace..." />;
+  if (loading || !subs) return <DashboardSkeleton />;
 
   const hasActive = subs.some((s) => ACTIVE.includes(s.status));
   const activeSubmission = subs.find((s) => ACTIVE.includes(s.status));
@@ -98,18 +98,18 @@ export default function StudentDashboard() {
         )}
         {error && <Alert>{error}</Alert>}
 
-        <section className="grid gap-4 md:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard icon={BookOpenTextIcon} label="All submissions" value={stats.total} hint="Across every status" />
           <MetricCard icon={TimeQuarter02Icon} label="Pending review" value={stats.pending} hint="With ARB reviewers" tone="amber" />
           <MetricCard icon={TaskDone01Icon} label="Published" value={stats.published} hint="Visible in the library" tone="green" />
           <MetricCard icon={FileUploadIcon} label="Needs action" value={stats.needsWork} hint="Drafts or revisions" tone="blue" />
         </section>
 
-        <section className="grid gap-5 xl:grid-cols-[1.2fr_.8fr]">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-slate-50/80 px-5 py-4">
+        <section className="grid gap-5 2xl:grid-cols-[minmax(0,1.35fr)_24rem]">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-gradient-to-r from-white to-amber-50/70 px-5 py-4">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Current research lane</p>
-              <h2 className="mt-1 text-lg font-bold text-[#071826]">Your active work</h2>
+              <h2 className="mt-1 text-xl font-black text-[#071826]">Your active work</h2>
             </div>
 
             {activeSubmission ? (
@@ -175,7 +175,7 @@ export default function StudentDashboard() {
           </div>
 
           <div className="space-y-5">
-            <div className="rounded-2xl border border-slate-200 bg-[#071826] p-5 text-white shadow-sm">
+            <div className="rounded-3xl border border-slate-200 bg-[#071826] p-5 text-white shadow-sm">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-400 text-[#071826]">
                 <Icon icon={AiChat02Icon} />
               </div>
@@ -188,7 +188,7 @@ export default function StudentDashboard() {
               </Link>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="font-bold text-[#071826]">Quick actions</h2>
               <div className="mt-4 grid gap-2">
                 <QuickLink icon={FileUploadIcon} href={hasActive ? '/dashboard' : '/submit'} label={hasActive ? 'Finish active submission' : 'Start a submission'} />
@@ -199,7 +199,7 @@ export default function StudentDashboard() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Recent activity</p>
@@ -266,13 +266,42 @@ function MetricCard({ icon, label, value, hint, tone }: { icon: any; label: stri
       ? 'bg-sky-50 text-sky-700'
       : 'bg-slate-100 text-slate-700';
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
       <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${styles}`}>
         <Icon icon={icon} />
       </div>
       <p className="mt-4 text-3xl font-black text-[#071826]">{value}</p>
       <p className="mt-1 text-sm font-semibold text-slate-700">{label}</p>
       <p className="mt-1 text-xs text-slate-500">{hint}</p>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="relative left-1/2 -my-8 flex min-h-[calc(100vh-8rem)] w-screen -translate-x-1/2 items-center justify-center bg-[#f4f1e8] px-4">
+      <div className="w-full max-w-5xl rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-900/5">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 animate-pulse rounded-2xl bg-amber-200" />
+          <div className="space-y-2">
+            <div className="h-4 w-48 animate-pulse rounded-full bg-slate-200" />
+            <div className="h-3 w-72 max-w-[65vw] animate-pulse rounded-full bg-slate-100" />
+          </div>
+        </div>
+        <div className="mt-6 grid gap-4 md:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="rounded-2xl border border-slate-100 p-4">
+              <div className="h-10 w-10 animate-pulse rounded-xl bg-slate-100" />
+              <div className="mt-5 h-7 w-16 animate-pulse rounded-full bg-slate-200" />
+              <div className="mt-3 h-3 w-28 animate-pulse rounded-full bg-slate-100" />
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 grid gap-4 lg:grid-cols-[1.3fr_.7fr]">
+          <div className="h-56 animate-pulse rounded-2xl bg-slate-100" />
+          <div className="h-56 animate-pulse rounded-2xl bg-slate-100" />
+        </div>
+      </div>
     </div>
   );
 }
