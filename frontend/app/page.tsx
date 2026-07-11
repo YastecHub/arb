@@ -119,14 +119,14 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-6xl gap-12 px-4 pb-28 pt-20 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:pb-32 lg:pt-24">
           <div>
             <h1 className="max-w-3xl font-display text-5xl font-semibold leading-[0.98] tracking-[-0.04em] sm:text-6xl lg:text-7xl">
-              Student engineering research should be seen, read, and built upon.
+              Access and submit engineering research papers from University of Lagos students.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              ResearchHub is the public archive of the ULES Academic &amp; Research Board: a place where people can find, review, and learn from engineering papers by University of Lagos students.
+              ResearchHub is maintained by the ULES Academic &amp; Research Board to publish approved student research papers and make them available for students, lecturers, researchers, and the public.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a href="#library" className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-5 py-3 text-sm font-bold text-[#071826] transition hover:bg-amber-300">
-                Read the papers <ArrowIcon />
+                View research papers <ArrowIcon />
               </a>
               <Link href="/register" className="inline-flex items-center rounded-lg border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
                 Submit a paper
@@ -169,7 +169,7 @@ export default function HomePage() {
                 <input
                   value={q}
                   onChange={(event) => onQueryChange(event.target.value)}
-                  placeholder={mode === 'ai' ? 'Describe a topic, problem, or research interest…' : 'Search paper titles, abstracts, authors, or full text…'}
+                  placeholder={mode === 'ai' ? 'Search by topic, research area, or problem statement…' : 'Search by title, abstract, author, or full text…'}
                   className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
                   aria-label="Search the research library"
                 />
@@ -203,19 +203,19 @@ export default function HomePage() {
             <section id="about" className="scroll-mt-24 py-14 lg:py-20">
               <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
                 <div>
-                  <Eyebrow>Why this archive exists</Eyebrow>
+                  <Eyebrow>Purpose of the archive</Eyebrow>
                   <h2 className="mt-4 font-display text-4xl leading-tight tracking-[-0.03em] text-[#071826] sm:text-5xl">
-                    So good student research does not disappear after submission.
+                    ResearchHub keeps approved student research papers available after submission.
                   </h2>
                 </div>
                 <div className="border-l-2 border-amber-400 pl-6 text-lg leading-8 text-slate-600">
-                  The ULES Academic &amp; Research Board preserves engineering papers from University of Lagos students and makes approved work available for classmates, researchers, industry readers, and the wider public to examine.
+                  The ULES Academic &amp; Research Board uses this archive to preserve engineering papers from University of Lagos students and make approved work available for academic reference and public review.
                 </div>
               </div>
               <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 md:grid-cols-3">
-                <ValueCard number="01" title="Preserve" text="Keep completed engineering research accessible beyond submission and graduation." />
-                <ValueCard number="02" title="Read" text="Let other students, lecturers, researchers, and interested readers examine the work." />
-                <ValueCard number="03" title="Build forward" text="Help new projects begin from what has already been studied, tested, and documented." />
+                <ValueCard number="01" title="Preserve" text="Keep completed engineering research papers available for future reference." />
+                <ValueCard number="02" title="Review" text="Allow students, lecturers, researchers, and other readers to examine approved work." />
+                <ValueCard number="03" title="Reference" text="Support new academic work with access to previous studies, methods, and findings." />
               </div>
             </section>
 
@@ -223,7 +223,7 @@ export default function HomePage() {
               <div className="grid gap-8 md:grid-cols-3 md:items-center">
                 <div className="md:col-span-1">
                   <p className="text-xs font-bold uppercase tracking-[0.22em]">The collection today</p>
-                  <p className="mt-3 font-display text-3xl leading-tight">A growing record of student engineering work.</p>
+                  <p className="mt-3 font-display text-3xl leading-tight">A collection of approved student research papers.</p>
                 </div>
                 <Metric value={String(browseTotal)} label="Published papers" />
                 <Metric value={String(facets.departments.length || 10)} label="Departments represented" />
@@ -233,14 +233,14 @@ export default function HomePage() {
             <section className="py-16 lg:py-24">
               <div className="grid gap-12 lg:grid-cols-[.7fr_1.3fr]">
                 <div>
-                  <Eyebrow>How papers enter the archive</Eyebrow>
-                  <h2 className="mt-4 font-display text-4xl tracking-[-0.03em] text-[#071826]">Students submit. ARB reviews. Readers discover.</h2>
-                  <p className="mt-5 leading-7 text-slate-600">The archive gives engineering students a formal place to submit completed work and gives the public a place to read approved papers.</p>
+                  <Eyebrow>Submission and review process</Eyebrow>
+                  <h2 className="mt-4 font-display text-4xl tracking-[-0.03em] text-[#071826]">Submit, review, and publish approved papers.</h2>
+                  <p className="mt-5 leading-7 text-slate-600">Engineering students can submit completed research papers for review. Approved papers are then added to the public library.</p>
                 </div>
                 <div className="space-y-3">
-                  <ProcessStep number="1" title="Paper submission" text="A UNILAG engineering student uploads a completed research paper with its abstract, department, session, and keywords." />
-                  <ProcessStep number="2" title="ARB review" text="The Academic &amp; Research Board reads the submission, requests corrections where needed, and approves papers fit for the archive." />
-                  <ProcessStep number="3" title="Public reading" text="Approved papers become searchable so students, reviewers, and outside readers can learn from what has been done." />
+                  <ProcessStep number="1" title="Paper submission" text="A University of Lagos engineering student uploads a completed research paper with the required details." />
+                  <ProcessStep number="2" title="ARB review" text="The Academic &amp; Research Board reviews the submission and may request corrections before approval." />
+                  <ProcessStep number="3" title="Publication" text="Approved papers are published in the library and made available for search, reading, and reference." />
                 </div>
               </div>
             </section>
@@ -288,7 +288,7 @@ function SearchResults(props: {
           </h2>
           <p className="mt-2 text-slate-500">For “{props.query}”</p>
         </div>
-        {props.mode === 'ai' && !props.aiAvailable && <p className="text-sm text-slate-500">Using local semantic + keyword matching</p>}
+        {props.mode === 'ai' && !props.aiAvailable && <p className="text-sm text-slate-500">Showing the closest available matches.</p>}
       </div>
       {props.error ? (
         <EmptyState title={props.error} hint="Please try again." />
@@ -323,23 +323,23 @@ function LibrarySection(props: {
       <div className="mb-10 flex flex-wrap items-end justify-between gap-5">
         <div>
           <Eyebrow>Open research library</Eyebrow>
-          <h2 className="mt-3 font-display text-4xl tracking-[-0.03em] text-[#071826] sm:text-5xl">Explore published work</h2>
+          <h2 className="mt-3 font-display text-4xl tracking-[-0.03em] text-[#071826] sm:text-5xl">Browse published papers</h2>
         </div>
-        <p className="max-w-md text-sm leading-6 text-slate-500">Browse {props.total} reviewed paper{props.total === 1 ? '' : 's'} by discipline, academic session, or research theme.</p>
+        <p className="max-w-md text-sm leading-6 text-slate-500">Browse {props.total} approved paper{props.total === 1 ? '' : 's'} by department, academic session, or research area.</p>
       </div>
       <div className="grid gap-8 lg:grid-cols-[240px_1fr]">
         <aside className="h-fit rounded-2xl bg-[#0d293d] p-5 shadow-xl shadow-slate-900/10 lg:sticky lg:top-24">
           <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-300">Refine collection</p>
-              <p className="mt-1 text-sm text-slate-400">Narrow the research archive</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-amber-300">Filter papers</p>
+              <p className="mt-1 text-sm text-slate-400">Select the papers you want to view</p>
             </div>
             <FilterIcon />
           </div>
           <div className="space-y-5">
             <FilterSelect label="Department" value={props.filters.department} options={props.facets.departments} onChange={(value) => props.onFilter('department', value)} />
             <FilterSelect label="Academic session" value={props.filters.session} options={props.facets.sessions} onChange={(value) => props.onFilter('session', value)} />
-            <FilterSelect label="Research theme" value={props.filters.tag} options={props.facets.tags} onChange={(value) => props.onFilter('tag', value)} />
+            <FilterSelect label="Research area" value={props.filters.tag} options={props.facets.tags} onChange={(value) => props.onFilter('tag', value)} />
           </div>
           {active && <button onClick={props.onClear} className="mt-6 w-full rounded-lg border border-amber-300/30 px-3 py-2.5 text-sm font-semibold text-amber-300 transition hover:bg-amber-300/10">Reset filters</button>}
         </aside>
