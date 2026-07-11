@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft02Icon, FileUploadIcon } from '@hugeicons/core-free-icons';
+import { ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import AppShell from '@/components/AppShell';
 import { api, apiUpload } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
@@ -11,6 +11,7 @@ import type { Submission, SubmissionThreadEvent } from '@/lib/types';
 import { Alert, StatusBadge, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import { Icon } from '@/components/icons';
+import { ReviewThread, RevisionComposer } from '@/components/ReviewThread';
 
 export default function StudentSubmissionThreadPage() {
   const { id } = useParams<{ id: string }>();
@@ -114,16 +115,7 @@ export default function StudentSubmissionThreadPage() {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 className="font-bold text-[#071826]">Conversation</h3>
-            <div className="mt-5 space-y-4">
-              {events.length === 0 ? (
-                <p className="text-sm text-slate-500">No review activity has been recorded yet.</p>
-              ) : (
-                events.map((event) => <ThreadEventCard key={event.id} event={event} />)
-              )}
-            </div>
-          </div>
+          <ReviewThread events={events} viewerRole="student" />
         </section>
 
         <aside className="space-y-4">
@@ -136,39 +128,15 @@ export default function StudentSubmissionThreadPage() {
           )}
 
           {canResubmit ? (
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="font-bold text-[#071826]">Submit revised paper</h3>
-              <p className="mt-1 text-sm text-slate-500">Upload the corrected PDF and add a short note for the reviewers.</p>
-              <div className="mt-4 space-y-3">
-                <textarea
-                  className="input min-h-[120px]"
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  placeholder="Briefly mention what you changed..."
-                />
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-                  className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-brand-700 hover:file:bg-brand-100"
-                />
-                {progress !== null && (
-                  <div>
-                    <div className="mb-1 flex justify-between text-xs text-slate-500">
-                      <span>{progress < 100 ? 'Uploading revised PDF…' : 'Saving resubmission…'}</span>
-                      <span>{progress}%</span>
-                    </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-                      <div className="h-full rounded-full bg-brand-600" style={{ width: `${progress}%` }} />
-                    </div>
-                  </div>
-                )}
-                <button className="btn-primary w-full" disabled={busy} onClick={resubmit}>
-                  <Icon icon={FileUploadIcon} className="h-4 w-4" />
-                  {busy ? 'Resubmitting…' : 'Resubmit for review'}
-                </button>
-              </div>
-            </div>
+            <RevisionComposer
+              note={note}
+              fileName={file?.name}
+              progress={progress}
+              busy={busy}
+              onNote={setNote}
+              onFile={setFile}
+              onSubmit={resubmit}
+            />
           ) : (
             <div className="rounded-3xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
               {closed
@@ -180,38 +148,6 @@ export default function StudentSubmissionThreadPage() {
       </div>
     </AppShell>
   );
-}
-
-function ThreadEventCard({ event }: { event: SubmissionThreadEvent }) {
-  const admin = event.actor_role === 'admin';
-  const title = eventTitle(event.event_type);
-  return (
-    <div className={`rounded-2xl border p-4 ${admin ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-slate-50'}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-semibold text-[#071826]">{title}</p>
-        <p className="text-xs text-slate-500">{formatDate(event.created_at)}</p>
-      </div>
-      <p className="mt-1 text-xs text-slate-500">
-        {event.actor_name || (admin ? 'ARB reviewer' : event.actor_role === 'student' ? 'Student' : 'System')}
-      </p>
-      {event.body && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{event.body}</p>}
-      {event.has_pdf && <p className="mt-3 text-xs font-semibold text-slate-500">PDF attached to this update</p>}
-    </div>
-  );
-}
-
-function eventTitle(type: SubmissionThreadEvent['event_type']) {
-  const labels: Record<SubmissionThreadEvent['event_type'], string> = {
-    submitted: 'Submitted for review',
-    revision_requested: 'Revision requested',
-    resubmitted: 'Revised paper submitted',
-    approved: 'Approved and published',
-    rejected: 'Rejected',
-    comment: 'Comment added',
-    unpublished: 'Unpublished',
-    republished: 'Republished',
-  };
-  return labels[type];
 }
 
 function ThreadSkeleton() {
@@ -230,4 +166,3 @@ function ThreadSkeleton() {
     </div>
   );
 }
-
