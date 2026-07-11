@@ -23,10 +23,19 @@ function parseTags(raw: unknown): string[] | undefined {
   return undefined;
 }
 
+const academicSessionSchema = z
+  .string()
+  .trim()
+  .regex(/^20\d{2}\/20\d{2}$/, 'Academic session must use the format 2024/2025')
+  .refine((value) => {
+    const [start, end] = value.split('/').map(Number);
+    return end === start + 1;
+  }, 'Academic session must be one academic year, such as 2024/2025');
+
 const metaSchema = z.object({
   title: z.string().min(3),
   abstract: z.string().optional().default(''),
-  session: z.string().optional(),
+  session: academicSessionSchema.optional(),
 });
 
 router.get(
@@ -70,7 +79,11 @@ router.put(
   uploadPdf,
   asyncHandler(async (req, res) => {
     const meta = z
-      .object({ title: z.string().min(3).optional(), abstract: z.string().optional(), session: z.string().optional() })
+      .object({
+        title: z.string().min(3).optional(),
+        abstract: z.string().optional(),
+        session: academicSessionSchema.optional(),
+      })
       .parse(req.body);
     const tags = parseTags(req.body.tags);
     const updated = await svc.update(req.user!.id, req.params.id, { ...meta, tags }, req.file);

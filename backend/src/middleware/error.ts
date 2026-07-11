@@ -19,6 +19,15 @@ export function errorHandler(err: any, _req: Request, res: Response, _next: Next
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
+  if (err?.__isStorageError || err?.namespace === 'storage') {
+    const message = String(err?.message ?? '');
+    const isAuthProblem = /JWS|JWT|signature|auth|unauthorized|forbidden/i.test(message) || String(err?.statusCode) === '403';
+    return res.status(isAuthProblem ? 502 : 500).json({
+      error: isAuthProblem
+        ? 'File storage is not configured correctly. Please check the Supabase service-role key and storage bucket.'
+        : 'The file could not be saved. Please try again.',
+    });
+  }
   // eslint-disable-next-line no-console
   console.error('Unhandled error:', err);
   return res.status(500).json({ error: 'Internal server error' });
