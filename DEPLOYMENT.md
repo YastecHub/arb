@@ -42,6 +42,8 @@ WARM_EMBEDDINGS_ON_START=false
 
 If the database password contains `@`, encode it as `%40` in `DATABASE_URL`.
 
+`GROQ_API_KEY` powers Engr. Ada Torque's full assistant responses and AI search re-ranking. If it is empty, the app still works: Ada falls back to safe hub-aware guidance and keyword-backed paper search.
+
 Run migrations once before or after the first deploy:
 
 ```bash

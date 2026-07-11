@@ -8,6 +8,7 @@ import submissionRoutes from './modules/submissions/submissions.routes';
 import adminRoutes from './modules/admin/admin.routes';
 import libraryRoutes from './modules/library/library.routes';
 import notificationRoutes from './modules/notifications/notifications.routes';
+import assistantRoutes from './modules/assistant/assistant.routes';
 
 export function createApp() {
   const app = express();
@@ -25,6 +26,7 @@ export function createApp() {
   app.use('/api/admin', adminRoutes);
   app.use('/api/library', libraryRoutes);
   app.use('/api/notifications', notificationRoutes);
+  app.use('/api/assistant', assistantRoutes);
 
   app.use((_req, res) => res.status(404).json({ error: 'Route not found' }));
   app.use(errorHandler);

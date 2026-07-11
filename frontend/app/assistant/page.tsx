@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   AiChat02Icon,
@@ -29,6 +29,14 @@ interface Message {
   role: 'assistant' | 'user';
   text: string;
   papers?: SearchResult[];
+  assistant?: 'groq' | 'fallback';
+}
+
+interface AssistantResponse {
+  answer: string;
+  papers: SearchResult[];
+  assistant: 'groq' | 'fallback';
+  grounded: boolean;
 }
 
 const STARTERS = [
@@ -89,93 +97,46 @@ export default function AssistantPage() {
     setError('');
 
     try {
-      const response = await answer(prompt, facets, libraryPreview);
-      setMessages((current) => [...current, response]);
+      const history = messages
+        .filter((message) => message.role === 'user' || message.role === 'assistant')
+        .slice(-8)
+        .map((message) => ({ role: message.role, content: message.text }));
+      const response = await api<AssistantResponse>('/api/assistant/chat', {
+        method: 'POST',
+        body: {
+          message: prompt,
+          history,
+          user: {
+            role: user?.role ?? 'visitor',
+            name: user?.name,
+          },
+        },
+      });
+      setMessages((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: response.answer,
+          papers: response.papers,
+          assistant: response.assistant,
+        },
+      ]);
     } catch (err: any) {
       setMessages((current) => [
         ...current,
         {
           id: crypto.randomUUID(),
           role: 'assistant',
-          text: err.message || 'My wrench slipped. Try that again in a moment.',
+          text:
+            err.message ||
+            'My wrench slipped. I could not reach the assistant service, but you can still use the Research library search while I tighten things back up.',
+          assistant: 'fallback',
         },
       ]);
     } finally {
       setBusy(false);
     }
-  }
-
-  async function answer(prompt: string, currentFacets: Facets | null, currentPreview: Paper[]): Promise<Message> {
-    const lower = prompt.toLowerCase();
-    const wantsSubmit = /submit|upload|send|review|paper|project/.test(lower) && /how|where|help|start|submit|upload/.test(lower);
-    const wantsAvailable = /available|currently|what.*hub|what.*library|departments|tags|sessions|papers|collection/.test(lower);
-    const wantsTags = /tag|keyword|theme/.test(lower);
-    const wantsNavigation = /where|navigate|page|dashboard|admin|login|library|find/.test(lower);
-    const searchQuery = cleanSearchQuery(prompt);
-
-    if (wantsSubmit) {
-      return {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text:
-          'To submit research: go to Submit research, enter your title, abstract, academic session, tags, and upload the PDF. Drafts can be edited; once submitted, ARB reviews it. If reviewers request revision, your dashboard will show the comment and the resubmit action.',
-      };
-    }
-
-    if (wantsTags) {
-      const tagLine = currentFacets?.tags.length
-        ? `The hub already uses tags like ${currentFacets.tags.slice(0, 10).join(', ')}.`
-        : 'The production library is still light on tags, so choose precise phrases reviewers and future students would search for.';
-      return {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text: `${tagLine} Good tags usually name the method, domain, and outcome: for example "machine learning", "renewable energy", "traffic prediction", "assistive technology", or "process optimisation". Use 3 to 6 tags, not a whole abstract in tag clothing.`,
-      };
-    }
-
-    if (wantsAvailable) {
-      const countText = currentPreview.length
-        ? `I can see published papers in the library. Here are a few currently visible.`
-        : 'The public production library is currently empty. The system is working, but papers will appear after students submit and admins publish them.';
-      const facetText = currentFacets
-        ? ` Departments represented: ${currentFacets.departments.length || 0}. Sessions represented: ${currentFacets.sessions.length || 0}. Tags represented: ${currentFacets.tags.length || 0}.`
-        : '';
-      return {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text: `${countText}${facetText}`,
-        papers: currentPreview.map(toSearchResult),
-      };
-    }
-
-    if (wantsNavigation && !/search|find|looking/.test(lower)) {
-      return {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text:
-          'Navigation map: Dashboard shows your submissions and review status. Submit research is where students upload papers. Research library is public browsing and search. Admin review desk is for ARB decisions. Manage published papers is where admins edit or unpublish live papers.',
-      };
-    }
-
-    const result = await api<{ results: SearchResult[]; total: number; aiAvailable: boolean }>(
-      `/api/library/search?q=${encodeURIComponent(searchQuery)}&mode=keyword&page=1&pageSize=5`
-    );
-
-    if (!result.results.length) {
-      return {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        text:
-          'I searched the library and did not find a matching published paper yet. Try broader terms, search by department or method, or check back after more ARB-approved papers are published.',
-      };
-    }
-
-    return {
-      id: crypto.randomUUID(),
-      role: 'assistant',
-      text: `I found ${result.total || result.results.length} matching paper${(result.total || result.results.length) === 1 ? '' : 's'}. Start with these; they look closest to what you asked for.`,
-      papers: result.results,
-    };
   }
 
   return (
@@ -282,7 +243,12 @@ function ChatBubble({ message }: { message: Message }) {
   return (
     <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
       <div className={`max-w-[46rem] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${mine ? 'bg-[#071826] text-white' : 'border border-slate-200 bg-white text-slate-700'}`}>
-        <p className="whitespace-pre-line">{message.text}</p>
+        {!mine && message.assistant === 'fallback' && (
+          <div className="mb-2 inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#9a6a10]">
+            Safe mode
+          </div>
+        )}
+        <FormattedText text={message.text} />
         {message.papers && message.papers.length > 0 && (
           <div className="mt-3 grid gap-2">
             {message.papers.map((paper) => (
@@ -307,6 +273,60 @@ function ChatBubble({ message }: { message: Message }) {
   );
 }
 
+function FormattedText({ text }: { text: string }) {
+  const blocks = text.split(/\n{2,}/).map((block) => block.trim()).filter(Boolean);
+  if (!blocks.length) return <p>I do not have an answer for that yet.</p>;
+
+  return (
+    <div className="space-y-3">
+      {blocks.map((block, index) => {
+        const lines = block.split('\n').map((line) => line.trim()).filter(Boolean);
+        const bulletLines = lines.filter((line) => /^[-*]\s+/.test(line));
+        const numberLines = lines.filter((line) => /^\d+[.)]\s+/.test(line));
+
+        if (bulletLines.length === lines.length) {
+          return (
+            <ul key={index} className="list-disc space-y-1 pl-5">
+              {lines.map((line, itemIndex) => (
+                <li key={itemIndex}>{renderInline(line.replace(/^[-*]\s+/, ''))}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        if (numberLines.length === lines.length) {
+          return (
+            <ol key={index} className="list-decimal space-y-1 pl-5">
+              {lines.map((line, itemIndex) => (
+                <li key={itemIndex}>{renderInline(line.replace(/^\d+[.)]\s+/, ''))}</li>
+              ))}
+            </ol>
+          );
+        }
+
+        return (
+          <p key={index} className="whitespace-pre-line">
+            {renderInline(block)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={index} className="rounded bg-slate-100 px-1 py-0.5 text-[0.92em] text-slate-800">{part.slice(1, -1)}</code>;
+    }
+    return <span key={index}>{part}</span>;
+  });
+}
+
 function InfoCard({ icon, title, text }: { icon: any; title: string; text: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -317,15 +337,4 @@ function InfoCard({ icon, title, text }: { icon: any; title: string; text: strin
       <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
     </div>
   );
-}
-
-function cleanSearchQuery(prompt: string) {
-  return prompt
-    .replace(/^(find|search|show me|look for|looking for)\s+/i, '')
-    .replace(/\b(papers?|research|projects?)\b/gi, '')
-    .trim() || prompt;
-}
-
-function toSearchResult(paper: Paper): SearchResult {
-  return { ...paper, score: 1, matchType: 'keyword' };
 }
