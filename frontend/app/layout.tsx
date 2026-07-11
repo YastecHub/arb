@@ -4,6 +4,7 @@ import { AuthProvider } from '@/lib/auth';
 import Navbar from '@/components/Navbar';
 import FloatingChatButton from '@/components/FloatingChatButton';
 import HomeRedirect from '@/components/HomeRedirect';
+import Footer from '@/components/Footer';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://arb-k7rw.vercel.app';
 const siteName = 'ULES ARB ResearchHub';
@@ -83,10 +84,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Navbar />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
           <FloatingChatButton />
-          <footer className="border-t border-white/10 bg-[#071826] py-8 text-center text-sm text-slate-400">
-            <p className="font-medium text-slate-200">ULES Academic &amp; Research Board</p>
-            <p className="mt-1">University of Lagos Engineering Society · ResearchHub</p>
-          </footer>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

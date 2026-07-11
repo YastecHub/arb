@@ -209,7 +209,7 @@ export default function AssistantPage() {
           <InfoCard
             icon={LibraryIcon}
             title="Current hub snapshot"
-            text={`${totalAvailable ? 'Published papers are visible.' : 'No published papers are visible yet.'} Ada checks the live library and search API when you ask.`}
+            text={`${totalAvailable ? 'Published papers are visible.' : 'No published papers are visible yet.'} Ada checks the current research collection when you ask.`}
           />
           <InfoCard
             icon={AiSearchIcon}
@@ -222,7 +222,7 @@ export default function AssistantPage() {
               Useful places
             </div>
             <div className="mt-4 grid gap-2">
-              <Link href="/#library" className="btn-outline justify-start">
+              <Link href="/library" className="btn-outline justify-start">
                 <Icon icon={BookOpenTextIcon} className="h-4 w-4" />
                 Research library
               </Link>

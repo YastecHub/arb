@@ -25,7 +25,7 @@ const ACTIVE = ['draft', 'pending_review', 'revision_requested'];
 
 const STATUS_HELP: Record<SubmissionStatus, string> = {
   draft: 'Keep shaping the submission. Upload the PDF, abstract, session, and tags before sending it to review.',
-  pending_review: 'The board has your paper. You can track the decision here while the review team works through the queue.',
+  pending_review: 'The board has your paper. You can track the decision here while the review team reads through current submissions.',
   revision_requested: 'The board left feedback. Update your work and resubmit when the issues are addressed.',
   rejected: 'This submission was not accepted. You can read the comment and prepare a stronger future submission.',
   published: 'Your work is live in the public library. Share it, cite it, and let the next team build from it.',
@@ -90,7 +90,7 @@ export default function StudentDashboard() {
   return (
     <AppShell
       title={`Welcome back${user?.name ? `, ${user.name.split(' ')[0]}` : ''}`}
-      subtitle="Track research work, respond to board feedback, and move your project toward publication."
+      subtitle="Follow your research from draft to review, respond to feedback, and prepare it for publication."
     >
       <div className="space-y-6">
         {hasActive && (
@@ -108,7 +108,7 @@ export default function StudentDashboard() {
         <section className="grid gap-5 2xl:grid-cols-[minmax(0,1.35fr)_24rem]">
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 bg-gradient-to-r from-white to-amber-50/70 px-5 py-4">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Current research lane</p>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Current paper</p>
               <h2 className="mt-1 text-xl font-black text-[#071826]">Your active work</h2>
             </div>
 
@@ -189,11 +189,11 @@ export default function StudentDashboard() {
             </div>
 
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h2 className="font-bold text-[#071826]">Quick actions</h2>
+              <h2 className="font-bold text-[#071826]">Helpful next steps</h2>
               <div className="mt-4 grid gap-2">
                 <QuickLink icon={FileUploadIcon} href={hasActive ? '/dashboard' : '/submit'} label={hasActive ? 'Finish active submission' : 'Start a submission'} />
-                <QuickLink icon={LibraryIcon} href="/#library" label="Explore the library" />
-                <QuickLink icon={AiChat02Icon} href="/assistant" label="Ask the hub assistant" />
+                <QuickLink icon={LibraryIcon} href="/library" label="Explore the research library" />
+                <QuickLink icon={AiChat02Icon} href="/assistant" label="Ask Ada for guidance" />
               </div>
             </div>
           </div>
@@ -202,8 +202,8 @@ export default function StudentDashboard() {
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Recent activity</p>
-              <h2 className="mt-1 text-lg font-bold text-[#071826]">Submission timeline</h2>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Recent progress</p>
+              <h2 className="mt-1 text-lg font-bold text-[#071826]">Your research record</h2>
             </div>
             <Link href="/submit" className={`btn-outline ${hasActive ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={hasActive}>
               <Icon icon={FileUploadIcon} className="h-4 w-4" />

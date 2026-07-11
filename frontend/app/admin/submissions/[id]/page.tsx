@@ -74,7 +74,7 @@ export default function ReviewPage() {
   if (loading) return <Spinner label="Loading submission…" />;
   if (!sub) {
     return error ? (
-      <div className="space-y-4"><Alert>{error}</Alert><Link href="/admin" className="btn-outline">← Back to dashboard</Link></div>
+      <div className="space-y-4"><Alert>{error}</Alert><Link href="/admin" className="btn-outline">← Back to review desk</Link></div>
     ) : <Spinner label="Loading submission…" />;
   }
 
@@ -83,7 +83,7 @@ export default function ReviewPage() {
   return (
     <div className="space-y-6">
       <Link href="/admin" className="text-sm text-brand-600 hover:underline">
-        ← Back to dashboard
+        ← Back to review desk
       </Link>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">

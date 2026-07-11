@@ -53,11 +53,11 @@ export default function AdminDashboard() {
   return (
     <AppShell
       title="ARB review desk"
-      subtitle="Review submissions, watch queue health, and manage published research from one workspace."
+      subtitle="Read submitted papers, record decisions, and care for the published research collection."
       actions={
         <Link href="/admin/published" className="btn-outline">
           <Icon icon={BookOpenTextIcon} className="h-4 w-4" />
-          Manage published
+          Published papers
         </Link>
       }
     >
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Review queue</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Papers awaiting attention</p>
             <h2 className="mt-1 text-xl font-black text-[#071826]">Submission decisions</h2>
           </div>
           <div className="flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-slate-50 p-1">

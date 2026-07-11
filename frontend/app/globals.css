@@ -10,7 +10,7 @@ body {
   @apply bg-[#f5f3ed] text-slate-900 antialiased;
 }
 
-/* Search highlight from the API's <mark> excerpts */
+/* Search highlight from ResearchHub excerpts */
 mark {
   @apply rounded bg-amber-200 px-0.5 text-slate-900;
 }

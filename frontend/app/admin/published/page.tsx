@@ -60,7 +60,7 @@ export default function PublishedManagement() {
           <p className="text-sm text-slate-500">Edit metadata, unpublish, or re-publish papers.</p>
         </div>
         <Link href="/admin" className="btn-outline">
-          ← Dashboard
+          ← Review desk
         </Link>
       </div>
 
