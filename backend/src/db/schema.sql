@@ -84,6 +84,30 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- ---------- submission review threads ----------
+CREATE TABLE IF NOT EXISTS submission_thread_events (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  submission_id UUID NOT NULL REFERENCES submissions(id) ON DELETE CASCADE,
+  actor_id      UUID REFERENCES users(id) ON DELETE SET NULL,
+  actor_role    TEXT NOT NULL CHECK (actor_role IN ('student', 'admin', 'system')),
+  event_type    TEXT NOT NULL CHECK (
+    event_type IN (
+      'submitted',
+      'revision_requested',
+      'resubmitted',
+      'approved',
+      'rejected',
+      'comment',
+      'unpublished',
+      'republished'
+    )
+  ),
+  body          TEXT,
+  pdf_key       TEXT,
+  pdf_url       TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Email activation is intentionally disabled. Keep legacy columns for backwards
 -- compatibility, but activate any accounts created by earlier versions.
 UPDATE users
@@ -96,10 +120,32 @@ CREATE INDEX IF NOT EXISTS idx_submissions_student     ON submissions (student_i
 CREATE UNIQUE INDEX IF NOT EXISTS idx_users_unique_matric_number
   ON users (lower(matric_number))
   WHERE matric_number IS NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_one_active_per_student
-  ON submissions (student_id)
-  WHERE status IN ('draft', 'pending_review', 'revision_requested');
+DROP INDEX IF EXISTS idx_submissions_one_active_per_student;
 CREATE INDEX IF NOT EXISTS idx_submissions_search_vec  ON submissions USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_submissions_title_trgm  ON submissions USING GIN (title gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_submissions_abs_trgm    ON submissions USING GIN (abstract gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_notifications_user      ON notifications (user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_submission_thread_events_submission
+  ON submission_thread_events (submission_id, created_at);
+
+INSERT INTO submission_thread_events (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url, created_at)
+SELECT s.id, s.student_id, 'student', 'submitted', 'Paper submitted for review.', s.pdf_key, s.pdf_url, s.updated_at
+  FROM submissions s
+ WHERE s.status IN ('pending_review', 'revision_requested', 'published', 'rejected', 'unpublished')
+   AND NOT EXISTS (
+     SELECT 1 FROM submission_thread_events e
+      WHERE e.submission_id = s.id AND e.event_type = 'submitted'
+   );
+
+INSERT INTO submission_thread_events (submission_id, actor_id, actor_role, event_type, body, created_at)
+SELECT s.id, NULL, 'admin',
+       CASE WHEN s.status = 'rejected' THEN 'rejected' ELSE 'revision_requested' END,
+       s.review_comment,
+       s.updated_at
+  FROM submissions s
+ WHERE s.review_comment IS NOT NULL
+   AND s.status IN ('revision_requested', 'rejected')
+   AND NOT EXISTS (
+     SELECT 1 FROM submission_thread_events e
+      WHERE e.submission_id = s.id AND e.event_type IN ('revision_requested', 'rejected')
+   );

@@ -58,10 +58,17 @@ router.get(
   })
 );
 
+router.get(
+  '/submissions/:id/thread',
+  asyncHandler(async (req, res) => {
+    res.json(await svc.listThread(req.params.id));
+  })
+);
+
 router.post(
   '/submissions/:id/approve',
   asyncHandler(async (req, res) => {
-    res.json(await svc.approve(req.params.id));
+    res.json(await svc.approve(req.params.id, req.user!.id));
   })
 );
 
@@ -69,7 +76,7 @@ router.post(
   '/submissions/:id/request-revision',
   asyncHandler(async (req, res) => {
     const { comment } = z.object({ comment: z.string().min(1) }).parse(req.body);
-    res.json(await svc.requestRevision(req.params.id, comment));
+    res.json(await svc.requestRevision(req.params.id, comment, req.user!.id));
   })
 );
 
@@ -77,21 +84,21 @@ router.post(
   '/submissions/:id/reject',
   asyncHandler(async (req, res) => {
     const { comment } = z.object({ comment: z.string().optional() }).parse(req.body);
-    res.json(await svc.reject(req.params.id, comment));
+    res.json(await svc.reject(req.params.id, comment, req.user!.id));
   })
 );
 
 router.post(
   '/papers/:id/unpublish',
   asyncHandler(async (req, res) => {
-    res.json(await svc.unpublish(req.params.id));
+    res.json(await svc.unpublish(req.params.id, req.user!.id));
   })
 );
 
 router.post(
   '/papers/:id/republish',
   asyncHandler(async (req, res) => {
-    res.json(await svc.republish(req.params.id));
+    res.json(await svc.republish(req.params.id, req.user!.id));
   })
 );
 

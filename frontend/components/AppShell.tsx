@@ -49,7 +49,7 @@ const adminNav: NavItem[] = [
   { href: '/assistant', label: 'Ask Ada Torque', icon: AiChat02Icon },
 ];
 
-const APP_PREFIXES = ['/dashboard', '/submit', '/library', '/assistant', '/admin'];
+const APP_PREFIXES = ['/dashboard', '/submit', '/submissions', '/library', '/assistant', '/admin'];
 const ShellContext = createContext<ShellContextValue | null>(null);
 
 export function AppFrame({ children }: { children: React.ReactNode }) {

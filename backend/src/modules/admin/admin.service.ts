@@ -10,6 +10,46 @@ async function getSubmissionOrThrow(id: string) {
   return rows[0];
 }
 
+async function addThreadEvent(input: {
+  submissionId: string;
+  actorId?: string | null;
+  actorRole: 'student' | 'admin' | 'system';
+  eventType: 'submitted' | 'revision_requested' | 'resubmitted' | 'approved' | 'rejected' | 'comment' | 'unpublished' | 'republished';
+  body?: string | null;
+  pdfKey?: string | null;
+  pdfUrl?: string | null;
+}) {
+  await query(
+    `INSERT INTO submission_thread_events
+       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [
+      input.submissionId,
+      input.actorId ?? null,
+      input.actorRole,
+      input.eventType,
+      input.body ?? null,
+      input.pdfKey ?? null,
+      input.pdfUrl ?? null,
+    ]
+  );
+}
+
+export async function listThread(id: string) {
+  await getSubmissionOrThrow(id);
+  const { rows } = await query(
+    `SELECT e.id, e.submission_id, e.actor_id, e.actor_role, e.event_type, e.body,
+            (e.pdf_key IS NOT NULL) AS has_pdf, e.created_at,
+            u.name AS actor_name, u.email AS actor_email
+       FROM submission_thread_events e
+       LEFT JOIN users u ON u.id = e.actor_id
+      WHERE e.submission_id = $1
+      ORDER BY e.created_at ASC`,
+    [id]
+  );
+  return rows;
+}
+
 export async function listSubmissions(status?: string) {
   const params: any[] = [];
   let where = '';
@@ -55,7 +95,7 @@ export async function downloadSubmission(id: string): Promise<{ buffer: Buffer; 
   };
 }
 
-export async function approve(id: string) {
+export async function approve(id: string, adminId?: string) {
   const sub = await getSubmissionOrThrow(id);
   if (sub.status !== 'pending_review') throw conflict('Only a pending submission can be approved');
   if (!sub.pdf_key) throw badRequest('A submission without a PDF cannot be published');
@@ -69,17 +109,24 @@ export async function approve(id: string) {
     [id]
   );
   if (!rows[0]) throw conflict('This submission is no longer pending review');
+  await addThreadEvent({
+    submissionId: id,
+    actorId: adminId,
+    actorRole: 'admin',
+    eventType: 'approved',
+    body: 'Paper approved and published. The review thread is now closed.',
+  });
   scheduleIndexing(id); // background: extract text + embedding
   await createNotification(
     sub.student_id,
     'published',
     'Your research paper is now live in the public Research Library.',
-    '/dashboard'
+    `/submissions/${id}`
   );
   return rows[0];
 }
 
-export async function requestRevision(id: string, comment: string) {
+export async function requestRevision(id: string, comment: string, adminId?: string) {
   if (!comment?.trim()) throw badRequest('A comment is required when requesting a revision');
   const sub = await getSubmissionOrThrow(id);
   if (sub.status !== 'pending_review') throw conflict('Only a pending submission can be returned for revision');
@@ -89,16 +136,23 @@ export async function requestRevision(id: string, comment: string) {
     [id, comment.trim()]
   );
   if (!rows[0]) throw conflict('This submission is no longer pending review');
+  await addThreadEvent({
+    submissionId: id,
+    actorId: adminId,
+    actorRole: 'admin',
+    eventType: 'revision_requested',
+    body: comment.trim(),
+  });
   await createNotification(
     sub.student_id,
     'revision_requested',
     'Revisions have been requested. Please check your submission for comments.',
-    '/dashboard'
+    `/submissions/${id}`
   );
   return rows[0];
 }
 
-export async function reject(id: string, comment?: string) {
+export async function reject(id: string, comment?: string, adminId?: string) {
   const sub = await getSubmissionOrThrow(id);
   if (sub.status !== 'pending_review') throw conflict('Only a pending submission can be rejected');
   const { rows } = await query(
@@ -107,16 +161,23 @@ export async function reject(id: string, comment?: string) {
     [id, comment?.trim() ?? null]
   );
   if (!rows[0]) throw conflict('This submission is no longer pending review');
+  await addThreadEvent({
+    submissionId: id,
+    actorId: adminId,
+    actorRole: 'admin',
+    eventType: 'rejected',
+    body: comment?.trim() || 'Submission rejected. The review thread is now closed.',
+  });
   await createNotification(
     sub.student_id,
     'rejected',
     'Your submission has not been approved. Please see the comments for details.',
-    '/dashboard'
+    `/submissions/${id}`
   );
   return rows[0];
 }
 
-export async function unpublish(id: string) {
+export async function unpublish(id: string, adminId?: string) {
   const sub = await getSubmissionOrThrow(id);
   if (sub.status !== 'published') throw badRequest('Only a published paper can be unpublished');
   const { rows } = await query(
@@ -125,6 +186,13 @@ export async function unpublish(id: string) {
     [id]
   );
   if (!rows[0]) throw conflict('This paper is no longer published');
+  await addThreadEvent({
+    submissionId: id,
+    actorId: adminId,
+    actorRole: 'admin',
+    eventType: 'unpublished',
+    body: 'Paper removed from the public library.',
+  });
   await createNotification(
     sub.student_id,
     'unpublished',
@@ -134,7 +202,7 @@ export async function unpublish(id: string) {
   return rows[0];
 }
 
-export async function republish(id: string) {
+export async function republish(id: string, adminId?: string) {
   const sub = await getSubmissionOrThrow(id);
   if (sub.status !== 'unpublished') throw badRequest('Only an unpublished paper can be re-published');
   const { rows } = await query(
@@ -143,6 +211,13 @@ export async function republish(id: string) {
     [id]
   );
   if (!rows[0]) throw conflict('This paper is no longer unpublished');
+  await addThreadEvent({
+    submissionId: id,
+    actorId: adminId,
+    actorRole: 'admin',
+    eventType: 'republished',
+    body: 'Paper restored to the public library.',
+  });
   if (sub.index_status !== 'ready') scheduleIndexing(id);
   await createNotification(
     sub.student_id,

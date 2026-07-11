@@ -62,6 +62,13 @@ router.get(
   })
 );
 
+router.get(
+  '/:id/thread',
+  asyncHandler(async (req, res) => {
+    res.json(await svc.listThread(req.user!.id, req.params.id));
+  })
+);
+
 router.post(
   '/',
   uploadPdf,
@@ -95,6 +102,15 @@ router.post(
   '/:id/submit',
   asyncHandler(async (req, res) => {
     res.json(await svc.submitForReview(req.user!.id, req.params.id));
+  })
+);
+
+router.post(
+  '/:id/resubmit',
+  uploadPdf,
+  asyncHandler(async (req, res) => {
+    const { note } = z.object({ note: z.string().optional() }).parse(req.body);
+    res.json(await svc.resubmitRevision(req.user!.id, req.params.id, note, req.file));
   })
 );
 

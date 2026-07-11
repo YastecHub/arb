@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 
-const APP_PREFIXES = ['/dashboard', '/admin', '/submit', '/assistant', '/library'];
+const APP_PREFIXES = ['/dashboard', '/admin', '/submit', '/submissions', '/assistant', '/library'];
 
 export default function Footer() {
   const { user } = useAuth();

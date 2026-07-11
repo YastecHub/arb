@@ -30,6 +30,10 @@ function SubmitInner() {
     if (editId) {
       api<Submission>(`/api/submissions/${editId}`, { auth: true })
         .then((s) => {
+          if (s.status === 'revision_requested' || s.status === 'pending_review') {
+            router.replace(`/submissions/${s.id}`);
+            return;
+          }
           setForm({ title: s.title, abstract: s.abstract, session: s.session ?? '', tags: s.tags.join(', ') });
           setHasExistingPdf(s.has_pdf);
           setReady(true);
@@ -40,7 +44,7 @@ function SubmitInner() {
           setReady(true);
         });
     }
-  }, [editId]);
+  }, [editId, router]);
 
   function set(k: string, v: string) {
     setForm((f) => ({ ...f, [k]: v }));

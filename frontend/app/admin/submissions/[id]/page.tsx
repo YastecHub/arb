@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, apiBlobUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Submission } from '@/lib/types';
+import type { Submission, SubmissionThreadEvent } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import AppShell from '@/components/AppShell';
@@ -14,6 +14,7 @@ export default function ReviewPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [sub, setSub] = useState<Submission | null>(null);
+  const [events, setEvents] = useState<SubmissionThreadEvent[]>([]);
   const [comment, setComment] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
@@ -25,7 +26,12 @@ export default function ReviewPage() {
 
   async function load() {
     try {
-      setSub(await api<Submission>(`/api/admin/submissions/${id}`, { auth: true }));
+      const [nextSub, nextEvents] = await Promise.all([
+        api<Submission>(`/api/admin/submissions/${id}`, { auth: true }),
+        api<SubmissionThreadEvent[]>(`/api/admin/submissions/${id}/thread`, { auth: true }),
+      ]);
+      setSub(nextSub);
+      setEvents(nextEvents);
     } catch (err: any) {
       setError(err.message || 'Could not load the submission');
     }
@@ -131,6 +137,17 @@ export default function ReviewPage() {
             </div>
           </div>
 
+          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="font-semibold text-slate-800">Review thread</h2>
+            <div className="mt-4 space-y-3">
+              {events.length === 0 ? (
+                <p className="text-sm text-slate-500">No thread activity yet.</p>
+              ) : (
+                events.map((event) => <ThreadEventCard key={event.id} event={event} />)
+              )}
+            </div>
+          </div>
+
           {sub.has_pdf ? (
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2">
@@ -204,6 +221,35 @@ export default function ReviewPage() {
     </div>
     </AppShell>
   );
+}
+
+function ThreadEventCard({ event }: { event: SubmissionThreadEvent }) {
+  const admin = event.actor_role === 'admin';
+  return (
+    <div className={`rounded-2xl border p-4 ${admin ? 'border-amber-200 bg-amber-50/60' : 'border-slate-200 bg-slate-50'}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="font-semibold text-[#071826]">{eventTitle(event.event_type)}</p>
+        <p className="text-xs text-slate-500">{formatDate(event.created_at)}</p>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">{event.actor_name || (admin ? 'ARB reviewer' : 'Student')}</p>
+      {event.body && <p className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">{event.body}</p>}
+      {event.has_pdf && <p className="mt-3 text-xs font-semibold text-slate-500">PDF attached to this update</p>}
+    </div>
+  );
+}
+
+function eventTitle(type: SubmissionThreadEvent['event_type']) {
+  const labels: Record<SubmissionThreadEvent['event_type'], string> = {
+    submitted: 'Submitted for review',
+    revision_requested: 'Revision requested',
+    resubmitted: 'Revised paper submitted',
+    approved: 'Approved and published',
+    rejected: 'Rejected',
+    comment: 'Comment added',
+    unpublished: 'Unpublished',
+    republished: 'Republished',
+  };
+  return labels[type];
 }
 
 function ReviewSkeleton() {

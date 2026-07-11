@@ -22,6 +22,7 @@ import AppShell from '@/components/AppShell';
 import { Icon } from '@/components/icons';
 
 const ACTIVE = ['draft', 'pending_review', 'revision_requested'];
+const ACTIVE_LIMIT = 3;
 
 const STATUS_HELP: Record<SubmissionStatus, string> = {
   draft: 'Keep shaping the submission. Upload the PDF, abstract, session, and tags before sending it to review.',
@@ -89,7 +90,9 @@ export default function StudentDashboard() {
     );
   }
 
-  const hasActive = subs.some((s) => ACTIVE.includes(s.status));
+  const activeCount = subs.filter((s) => ACTIVE.includes(s.status)).length;
+  const hasActive = activeCount > 0;
+  const canStartSubmission = activeCount < ACTIVE_LIMIT;
   const activeSubmission = subs.find((s) => ACTIVE.includes(s.status));
   const recent = [...subs].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)).slice(0, 4);
 
@@ -99,8 +102,8 @@ export default function StudentDashboard() {
       subtitle="Follow your research from draft to review, respond to feedback, and prepare it for publication."
     >
       <div className="space-y-6">
-        {hasActive && (
-          <Alert kind="info">You have an active submission. Finish or await a decision on it before starting a new one.</Alert>
+        {!canStartSubmission && (
+          <Alert kind="info">You have {ACTIVE_LIMIT} active submissions. Finish or await decisions on them before starting another one.</Alert>
         )}
         {error && <Alert>{error}</Alert>}
 
@@ -142,13 +145,20 @@ export default function StudentDashboard() {
                   <div className="flex shrink-0 flex-wrap gap-2 lg:flex-col">
                     {(activeSubmission.status === 'draft' || activeSubmission.status === 'revision_requested') && (
                       <>
-                        <Link href={`/submit?id=${activeSubmission.id}`} className="btn-outline">
-                          Edit submission
+                        <Link href={activeSubmission.status === 'draft' ? `/submit?id=${activeSubmission.id}` : `/submissions/${activeSubmission.id}`} className="btn-outline">
+                          {activeSubmission.status === 'draft' ? 'Edit submission' : 'Open review thread'}
                         </Link>
-                        <button className="btn-primary" disabled={busyId === activeSubmission.id} onClick={() => submitForReview(activeSubmission.id)}>
-                          {busyId === activeSubmission.id ? 'Submitting...' : activeSubmission.status === 'draft' ? 'Submit for review' : 'Resubmit'}
-                        </button>
+                        {activeSubmission.status === 'draft' && (
+                          <button className="btn-primary" disabled={busyId === activeSubmission.id} onClick={() => submitForReview(activeSubmission.id)}>
+                            {busyId === activeSubmission.id ? 'Submitting...' : 'Submit for review'}
+                          </button>
+                        )}
                       </>
+                    )}
+                    {activeSubmission.status === 'pending_review' && (
+                      <Link href={`/submissions/${activeSubmission.id}`} className="btn-outline">
+                        Open review thread
+                      </Link>
                     )}
                     <Link href="/assistant" className="btn-ghost">
                       <Icon icon={AiChat02Icon} className="h-4 w-4" />
@@ -171,7 +181,7 @@ export default function StudentDashboard() {
               <div className="p-5">
                 <EmptyState title="No active submission." hint="Start a new project submission when your work is ready for ARB review." />
                 <div className="mt-4">
-                  <Link href="/submit" className={`btn-primary ${hasActive ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={hasActive}>
+                  <Link href="/submit" className={`btn-primary ${!canStartSubmission ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={!canStartSubmission}>
                     <Icon icon={FileUploadIcon} className="h-4 w-4" />
                     New submission
                   </Link>
@@ -197,7 +207,7 @@ export default function StudentDashboard() {
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="font-bold text-[#071826]">Helpful next steps</h2>
               <div className="mt-4 grid gap-2">
-                <QuickLink icon={FileUploadIcon} href={hasActive ? '/dashboard' : '/submit'} label={hasActive ? 'Finish active submission' : 'Start a submission'} />
+                <QuickLink icon={FileUploadIcon} href={canStartSubmission ? '/submit' : '/dashboard'} label={canStartSubmission ? 'Start a submission' : 'Active submission limit reached'} />
                 <QuickLink icon={LibraryIcon} href="/library" label="Explore the research library" />
                 <QuickLink icon={AiChat02Icon} href="/assistant" label="Ask Ada for guidance" />
               </div>
@@ -211,7 +221,7 @@ export default function StudentDashboard() {
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9a6a10]">Recent progress</p>
               <h2 className="mt-1 text-lg font-bold text-[#071826]">Your research record</h2>
             </div>
-            <Link href="/submit" className={`btn-outline ${hasActive ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={hasActive}>
+            <Link href="/submit" className={`btn-outline ${!canStartSubmission ? 'pointer-events-none opacity-50' : ''}`} aria-disabled={!canStartSubmission}>
               <Icon icon={FileUploadIcon} className="h-4 w-4" />
               New submission
             </Link>
@@ -241,9 +251,9 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    {(submission.status === 'draft' || submission.status === 'revision_requested') && (
-                      <Link href={`/submit?id=${submission.id}`} className="btn-outline">
-                        Continue
+                    {(submission.status === 'draft' || submission.status === 'revision_requested' || submission.status === 'pending_review') && (
+                      <Link href={submission.status === 'draft' ? `/submit?id=${submission.id}` : `/submissions/${submission.id}`} className="btn-outline">
+                        {submission.status === 'draft' ? 'Continue' : 'Review thread'}
                       </Link>
                     )}
                     {submission.status === 'published' && (

@@ -5,6 +5,7 @@ import { badRequest, forbidden, notFound, conflict } from '../../utils/http';
 import { notifyAllAdmins } from '../notifications/notifications.service';
 
 const ACTIVE_STATUSES = ['draft', 'pending_review', 'revision_requested'];
+const ACTIVE_SUBMISSION_LIMIT = 3;
 
 export interface SubmissionInput {
   title: string;
@@ -67,6 +68,46 @@ async function storePdf(studentId: string, file: Express.Multer.File) {
   return storage.put(key, file.buffer, 'application/pdf');
 }
 
+async function addThreadEvent(input: {
+  submissionId: string;
+  actorId?: string | null;
+  actorRole: 'student' | 'admin' | 'system';
+  eventType: 'submitted' | 'revision_requested' | 'resubmitted' | 'approved' | 'rejected' | 'comment' | 'unpublished' | 'republished';
+  body?: string | null;
+  pdfKey?: string | null;
+  pdfUrl?: string | null;
+}) {
+  await query(
+    `INSERT INTO submission_thread_events
+       (submission_id, actor_id, actor_role, event_type, body, pdf_key, pdf_url)
+     VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+    [
+      input.submissionId,
+      input.actorId ?? null,
+      input.actorRole,
+      input.eventType,
+      input.body ?? null,
+      input.pdfKey ?? null,
+      input.pdfUrl ?? null,
+    ]
+  );
+}
+
+export async function listThread(studentId: string, id: string) {
+  await getOwnRecord(studentId, id);
+  const { rows } = await query(
+    `SELECT e.id, e.submission_id, e.actor_id, e.actor_role, e.event_type, e.body,
+            (e.pdf_key IS NOT NULL) AS has_pdf, e.created_at,
+            u.name AS actor_name, u.email AS actor_email
+       FROM submission_thread_events e
+       LEFT JOIN users u ON u.id = e.actor_id
+      WHERE e.submission_id = $1
+      ORDER BY e.created_at ASC`,
+    [id]
+  );
+  return rows;
+}
+
 /** Create a new submission (draft or submitted). Enforces the one-active-submission rule. */
 export async function create(
   studentId: string,
@@ -74,12 +115,12 @@ export async function create(
   file: Express.Multer.File | undefined,
   submit: boolean
 ) {
-  const active = await query(
-    `SELECT id FROM submissions WHERE student_id = $1 AND status = ANY($2)`,
+  const active = await query<{ count: string }>(
+    `SELECT COUNT(*)::int AS count FROM submissions WHERE student_id = $1 AND status = ANY($2)`,
     [studentId, ACTIVE_STATUSES]
   );
-  if (active.rowCount) {
-    throw conflict('You already have an active submission. Edit or withdraw it before starting a new one.');
+  if (Number(active.rows[0]?.count ?? 0) >= ACTIVE_SUBMISSION_LIMIT) {
+    throw conflict(`You can only have ${ACTIVE_SUBMISSION_LIMIT} active submissions at a time.`);
   }
   if (submit && !file) throw badRequest('A PDF document is required to submit for review');
   if (submit && !input.abstract?.trim()) throw badRequest('An abstract is required to submit for review');
@@ -117,11 +158,22 @@ export async function create(
   } catch (err: any) {
     if (pdf.key) await storage.remove(pdf.key).catch(() => {});
     if (err?.code === '23505') {
-      throw conflict('You already have an active submission.');
+      throw conflict(`You can only have ${ACTIVE_SUBMISSION_LIMIT} active submissions at a time.`);
     }
     throw err;
   }
-  if (submit) await notifyAllAdmins('submission_new', 'A new project has been submitted for review.', '/admin');
+  if (submit) {
+    await addThreadEvent({
+      submissionId: rows[0].id,
+      actorId: studentId,
+      actorRole: 'student',
+      eventType: 'submitted',
+      body: 'Paper submitted for review.',
+      pdfKey: pdf.key,
+      pdfUrl: pdf.url,
+    });
+    await notifyAllAdmins('submission_new', 'A new project has been submitted for review.', '/admin');
+  }
   return getOwn(studentId, rows[0].id);
 }
 
@@ -190,6 +242,65 @@ export async function submitForReview(studentId: string, id: string) {
        WHERE id = $1 AND student_id = $2 RETURNING id`,
     [id, studentId]
   );
+  await addThreadEvent({
+    submissionId: id,
+    actorId: studentId,
+    actorRole: 'student',
+    eventType: current.status === 'revision_requested' ? 'resubmitted' : 'submitted',
+    body: current.status === 'revision_requested' ? 'Revised paper submitted for review.' : 'Paper submitted for review.',
+    pdfKey: current.pdf_key,
+    pdfUrl: current.pdf_url,
+  });
   await notifyAllAdmins('submission_new', 'A new project has been submitted for review.', '/admin');
   return getOwn(studentId, rows[0].id);
+}
+
+export async function resubmitRevision(
+  studentId: string,
+  id: string,
+  note: string | undefined,
+  file: Express.Multer.File | undefined
+) {
+  const current = await getOwnRecord(studentId, id);
+  if (current.status !== 'revision_requested') {
+    throw badRequest('Only a revision-requested submission can be resubmitted here');
+  }
+  if (!file && !current.pdf_key) throw badRequest('Upload the revised project PDF before resubmitting');
+
+  let pdfKey = current.pdf_key;
+  let pdfUrl = current.pdf_url;
+  let oldPdfKey: string | null = null;
+  if (file) {
+    const stored = await storePdf(studentId, file);
+    oldPdfKey = current.pdf_key;
+    pdfKey = stored.key;
+    pdfUrl = stored.url;
+  }
+
+  const { rows } = await query<{ id: string }>(
+    `UPDATE submissions SET
+        status = 'pending_review',
+        pdf_key = $3,
+        pdf_url = $4,
+        full_text = CASE WHEN $5::boolean THEN '' ELSE full_text END,
+        embedding = CASE WHEN $5::boolean THEN NULL ELSE embedding END,
+        index_status = CASE WHEN $5::boolean THEN 'none' ELSE index_status END,
+        updated_at = now()
+      WHERE id = $1 AND student_id = $2 AND status = 'revision_requested'
+      RETURNING id`,
+    [id, studentId, pdfKey, pdfUrl, Boolean(file)]
+  );
+  if (!rows[0]) throw conflict('This submission is no longer awaiting revision');
+  if (oldPdfKey) await storage.remove(oldPdfKey).catch(() => {});
+  await addThreadEvent({
+    submissionId: id,
+    actorId: studentId,
+    actorRole: 'student',
+    eventType: 'resubmitted',
+    body: note?.trim() || 'Revised paper submitted for review.',
+    pdfKey,
+    pdfUrl,
+  });
+  await notifyAllAdmins('submission_new', 'A revised paper has been resubmitted for review.', `/admin/submissions/${id}`);
+  return getOwn(studentId, id);
 }

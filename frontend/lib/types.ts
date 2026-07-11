@@ -37,6 +37,29 @@ export interface Submission {
   updated_at: string;
 }
 
+export type ThreadEventType =
+  | 'submitted'
+  | 'revision_requested'
+  | 'resubmitted'
+  | 'approved'
+  | 'rejected'
+  | 'comment'
+  | 'unpublished'
+  | 'republished';
+
+export interface SubmissionThreadEvent {
+  id: string;
+  submission_id: string;
+  actor_id: string | null;
+  actor_role: 'student' | 'admin' | 'system';
+  event_type: ThreadEventType;
+  body: string | null;
+  has_pdf: boolean;
+  actor_name: string | null;
+  actor_email: string | null;
+  created_at: string;
+}
+
 export interface Paper {
   id: string;
   title: string;
