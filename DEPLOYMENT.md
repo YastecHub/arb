@@ -4,11 +4,18 @@ Deploy this monorepo as two Vercel projects from the same Git repository.
 
 ## 1. Backend Project
 
+### Render
+
+The repository includes `render.yaml` for the backend service. If you create the service manually instead of using the Blueprint, use:
+
 - Root directory: `backend`
-- Framework preset: Other
-- Build command: `npm run build`
+- Build command: `npm ci && npm run build`
 - Start command: `npm start`
 - Health check path: `/health`
+
+### Vercel
+
+If deploying the backend on Vercel, create a separate backend project with root directory `backend`.
 
 Required production environment variables:
 
