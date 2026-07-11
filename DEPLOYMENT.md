@@ -67,7 +67,8 @@ Do not run `npm run seed` in production.
 Required production environment variable:
 
 ```bash
-NEXT_PUBLIC_API_URL=https://your-backend.vercel.app
+NEXT_PUBLIC_API_URL=https://arb-e137.onrender.com
+NEXT_PUBLIC_SITE_URL=https://arb-k7rw.vercel.app
 ```
 
 After both projects are deployed, update backend `FRONTEND_URL` to the final frontend domain and redeploy the backend.

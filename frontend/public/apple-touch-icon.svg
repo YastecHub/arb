@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="ULES ARB ResearchHub">
+  <rect width="180" height="180" rx="40" fill="#071826"/>
+  <circle cx="58" cy="62" r="27" fill="none" stroke="#ffffff" stroke-width="11" stroke-dasharray="8 10"/>
+  <path d="M106 48h22l27 84h-22l-4.3-14.5h-25.6L98.7 132H77L106 48Zm1.8 52h16.5l-8.1-28-8.4 28Z" fill="#f5b51b"/>
+  <path d="M38 124h31" stroke="#f5b51b" stroke-width="14" stroke-linecap="round"/>
+</svg>
