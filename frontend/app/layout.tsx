@@ -9,13 +9,13 @@ import Footer from '@/components/Footer';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://arb-k7rw.vercel.app';
 const siteName = 'ULES ARB ResearchHub';
 const siteDescription =
-  'Discover, submit, and read approved engineering research from the University of Lagos Engineering Society Academic & Research Board.';
+  'A public archive where University of Lagos engineering students submit research papers and readers can find, review, and learn from approved work.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: siteName,
   title: {
-    default: `${siteName} - Engineering research, openly shared`,
+    default: `${siteName} - Student engineering papers, openly accessible`,
     template: `%s | ${siteName}`,
   },
   description: siteDescription,
@@ -39,20 +39,20 @@ export const metadata: Metadata = {
     locale: 'en_NG',
     url: '/',
     siteName,
-    title: `${siteName} - Engineering research, openly shared`,
+    title: `${siteName} - Student engineering papers, openly accessible`,
     description: siteDescription,
     images: [
       {
         url: '/og/researchhub-og.png',
         width: 1200,
         height: 630,
-        alt: 'ULES ARB ResearchHub social preview showing engineering research papers and blueprint visuals',
+        alt: 'ULES ARB ResearchHub social preview showing student engineering research papers and blueprint visuals',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: `${siteName} - Engineering research, openly shared`,
+    title: `${siteName} - Student engineering papers, openly accessible`,
     description: siteDescription,
     images: ['/og/researchhub-og.png'],
   },

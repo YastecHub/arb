@@ -119,17 +119,17 @@ export default function HomePage() {
         <div className="relative mx-auto grid max-w-6xl gap-12 px-4 pb-28 pt-20 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:pb-32 lg:pt-24">
           <div>
             <h1 className="max-w-3xl font-display text-5xl font-semibold leading-[0.98] tracking-[-0.04em] sm:text-6xl lg:text-7xl">
-              Engineering ideas deserve a life beyond the final page.
+              Student engineering research should be seen, read, and built upon.
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-slate-300">
-              Discover the work of UNILAG&apos;s next generation of engineers. ResearchHub preserves excellent student research and opens it to students, industry, and the world.
+              ResearchHub is the public archive of the ULES Academic &amp; Research Board: a place where people can find, review, and learn from engineering papers by University of Lagos students.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a href="#library" className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-5 py-3 text-sm font-bold text-[#071826] transition hover:bg-amber-300">
-                Explore the library <ArrowIcon />
+                Read the papers <ArrowIcon />
               </a>
               <Link href="/register" className="inline-flex items-center rounded-lg border border-white/25 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10">
-                Submit your research
+                Submit a paper
               </Link>
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function HomePage() {
             <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-amber-400" />
             <div className="absolute right-14 top-14 h-80 w-[22rem] rotate-3 rounded-2xl border border-white/20 bg-[#102b40] p-7 shadow-2xl">
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
-                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300">Research record 024</span>
+                <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-300">Reviewed paper 024</span>
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
               </div>
               <div className="mt-7 space-y-3">
@@ -150,8 +150,8 @@ export default function HomePage() {
                 <div className="h-1.5 w-full rounded-full bg-white/15" />
               </div>
               <div className="mt-10 grid grid-cols-2 gap-3">
-                <div className="rounded-lg bg-white/5 p-4"><span className="block text-2xl font-display text-white">A+</span><span className="text-[10px] uppercase tracking-widest text-slate-400">Verified work</span></div>
-                <div className="rounded-lg bg-white/5 p-4"><span className="block text-2xl font-display text-white">Open</span><span className="text-[10px] uppercase tracking-widest text-slate-400">Public access</span></div>
+                <div className="rounded-lg bg-white/5 p-4"><span className="block text-2xl font-display text-white">ARB</span><span className="text-[10px] uppercase tracking-widest text-slate-400">Reviewed</span></div>
+                <div className="rounded-lg bg-white/5 p-4"><span className="block text-2xl font-display text-white">Open</span><span className="text-[10px] uppercase tracking-widest text-slate-400">For readers</span></div>
               </div>
             </div>
             <div className="absolute bottom-0 left-0 rounded-xl border border-white/15 bg-white/10 px-5 py-4 backdrop-blur">
@@ -169,15 +169,15 @@ export default function HomePage() {
                 <input
                   value={q}
                   onChange={(event) => onQueryChange(event.target.value)}
-                  placeholder={mode === 'ai' ? 'Describe the engineering problem you are exploring…' : 'Search titles, abstracts, authors, or full paper text…'}
+                  placeholder={mode === 'ai' ? 'Describe a topic, problem, or research interest…' : 'Search paper titles, abstracts, authors, or full text…'}
                   className="min-w-0 flex-1 bg-transparent text-base text-slate-900 outline-none placeholder:text-slate-400"
                   aria-label="Search the research library"
                 />
                 {searching && <Spinner />}
               </div>
               <div className="flex rounded-xl bg-slate-100 p-1 text-sm">
-                <ModeButton active={mode === 'keyword'} onClick={() => onModeChange('keyword')}>Keyword</ModeButton>
-                <ModeButton active={mode === 'ai'} onClick={() => onModeChange('ai')}>AI discovery</ModeButton>
+                <ModeButton active={mode === 'keyword'} onClick={() => onModeChange('keyword')}>Exact search</ModeButton>
+                <ModeButton active={mode === 'ai'} onClick={() => onModeChange('ai')}>Topic search</ModeButton>
               </div>
             </div>
           </div>
@@ -203,19 +203,19 @@ export default function HomePage() {
             <section id="about" className="scroll-mt-24 py-14 lg:py-20">
               <div className="grid gap-12 lg:grid-cols-[.85fr_1.15fr] lg:items-end">
                 <div>
-                  <Eyebrow>Why ResearchHub exists</Eyebrow>
+                  <Eyebrow>Why this archive exists</Eyebrow>
                   <h2 className="mt-4 font-display text-4xl leading-tight tracking-[-0.03em] text-[#071826] sm:text-5xl">
-                    From submitted work to shared engineering knowledge.
+                    So good student research does not disappear after submission.
                   </h2>
                 </div>
                 <div className="border-l-2 border-amber-400 pl-6 text-lg leading-8 text-slate-600">
-                  The ULES Academic &amp; Research Board supports the academic growth of UNILAG engineers. This repository ensures valuable undergraduate work is preserved, discoverable, and able to inspire the next solution.
+                  The ULES Academic &amp; Research Board preserves engineering papers from University of Lagos students and makes approved work available for classmates, researchers, industry readers, and the wider public to examine.
                 </div>
               </div>
               <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200 md:grid-cols-3">
                 <ValueCard number="01" title="Preserve" text="Keep completed engineering research accessible beyond submission and graduation." />
-                <ValueCard number="02" title="Discover" text="Search exact terms or describe a problem naturally with AI-assisted discovery." />
-                <ValueCard number="03" title="Build forward" text="Learn from prior work, find evidence, and create stronger engineering solutions." />
+                <ValueCard number="02" title="Read" text="Let other students, lecturers, researchers, and interested readers examine the work." />
+                <ValueCard number="03" title="Build forward" text="Help new projects begin from what has already been studied, tested, and documented." />
               </div>
             </section>
 
@@ -223,7 +223,7 @@ export default function HomePage() {
               <div className="grid gap-8 md:grid-cols-3 md:items-center">
                 <div className="md:col-span-1">
                   <p className="text-xs font-bold uppercase tracking-[0.22em]">The collection today</p>
-                  <p className="mt-3 font-display text-3xl leading-tight">A living index of student ingenuity.</p>
+                  <p className="mt-3 font-display text-3xl leading-tight">A growing record of student engineering work.</p>
                 </div>
                 <Metric value={String(browseTotal)} label="Published papers" />
                 <Metric value={String(facets.departments.length || 10)} label="Departments represented" />
@@ -233,14 +233,14 @@ export default function HomePage() {
             <section className="py-16 lg:py-24">
               <div className="grid gap-12 lg:grid-cols-[.7fr_1.3fr]">
                 <div>
-                  <Eyebrow>How it works</Eyebrow>
-                  <h2 className="mt-4 font-display text-4xl tracking-[-0.03em] text-[#071826]">A clear path from project to public value.</h2>
-                  <p className="mt-5 leading-7 text-slate-600">Built for students, reviewed by ULES ARB administrators, and open to every curious reader.</p>
+                  <Eyebrow>How papers enter the archive</Eyebrow>
+                  <h2 className="mt-4 font-display text-4xl tracking-[-0.03em] text-[#071826]">Students submit. ARB reviews. Readers discover.</h2>
+                  <p className="mt-5 leading-7 text-slate-600">The archive gives engineering students a formal place to submit completed work and gives the public a place to read approved papers.</p>
                 </div>
                 <div className="space-y-3">
-                  <ProcessStep number="1" title="Student submission" text="A UNILAG engineering student uploads a completed project with its abstract, session, and keywords." />
-                  <ProcessStep number="2" title="Academic review" text="The board reviews the paper, requests revisions where needed, and approves work ready for publication." />
-                  <ProcessStep number="3" title="Open discovery" text="Approved work is indexed across metadata and full text, then published to the public library." />
+                  <ProcessStep number="1" title="Paper submission" text="A UNILAG engineering student uploads a completed research paper with its abstract, department, session, and keywords." />
+                  <ProcessStep number="2" title="ARB review" text="The Academic &amp; Research Board reads the submission, requests corrections where needed, and approves papers fit for the archive." />
+                  <ProcessStep number="3" title="Public reading" text="Approved papers become searchable so students, reviewers, and outside readers can learn from what has been done." />
                 </div>
               </div>
             </section>
