@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft02Icon } from '@hugeicons/core-free-icons';
@@ -11,7 +11,7 @@ import type { Submission, SubmissionThreadEvent } from '@/lib/types';
 import { Alert, StatusBadge, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import { Icon } from '@/components/icons';
-import { ReviewThread, RevisionComposer } from '@/components/ReviewThread';
+import { ReviewThread, RevisionComposer, WaitingComposer } from '@/components/ReviewThread';
 
 export default function StudentSubmissionThreadPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,10 +49,6 @@ export default function StudentSubmissionThreadPage() {
 
   const closed = submission ? ['published', 'rejected', 'unpublished'].includes(submission.status) : false;
   const canResubmit = submission?.status === 'revision_requested';
-  const latestFeedback = useMemo(
-    () => [...events].reverse().find((event) => event.event_type === 'revision_requested' || event.event_type === 'rejected'),
-    [events]
-  );
 
   async function resubmit() {
     if (!submission || !canResubmit) return;
@@ -93,8 +89,7 @@ export default function StudentSubmissionThreadPage() {
       subtitle="Track ARB feedback, revision requests, and resubmissions for this paper."
       actions={<Link href="/dashboard" className="btn-outline"><Icon icon={ArrowLeft02Icon} className="h-4 w-4" /> Overview</Link>}
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <section className="space-y-4">
+      <div className="mx-auto max-w-5xl space-y-4">
           <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
@@ -115,36 +110,26 @@ export default function StudentSubmissionThreadPage() {
             </div>
           </div>
 
-          <ReviewThread events={events} viewerRole="student" />
-        </section>
-
-        <aside className="space-y-4">
           {error && <Alert>{error}</Alert>}
-          {latestFeedback?.body && (
-            <div className="rounded-3xl border border-orange-200 bg-orange-50 p-5 text-sm leading-6 text-orange-950">
-              <p className="font-bold">Latest ARB feedback</p>
-              <p className="mt-2 whitespace-pre-line">{latestFeedback.body}</p>
-            </div>
-          )}
-
-          {canResubmit ? (
-            <RevisionComposer
-              note={note}
-              fileName={file?.name}
-              progress={progress}
-              busy={busy}
-              onNote={setNote}
-              onFile={setFile}
-              onSubmit={resubmit}
-            />
-          ) : (
-            <div className="rounded-3xl border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-              {closed
-                ? 'This thread is closed because the review has reached a final decision.'
-                : 'This paper is with ARB reviewers. You will be able to resubmit here if revisions are requested.'}
-            </div>
-          )}
-        </aside>
+          <ReviewThread
+            events={events}
+            viewerRole="student"
+            composer={
+              canResubmit ? (
+                <RevisionComposer
+                  note={note}
+                  fileName={file?.name}
+                  progress={progress}
+                  busy={busy}
+                  onNote={setNote}
+                  onFile={setFile}
+                  onSubmit={resubmit}
+                />
+              ) : (
+                <WaitingComposer closed={closed} />
+              )
+            }
+          />
       </div>
     </AppShell>
   );
@@ -152,8 +137,7 @@ export default function StudentSubmissionThreadPage() {
 
 function ThreadSkeleton() {
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
         <div className="h-32 animate-pulse rounded-3xl bg-white" />
         <div className="rounded-3xl border border-slate-200 bg-white p-5">
           <div className="h-5 w-36 animate-pulse rounded-full bg-slate-200" />
@@ -161,8 +145,6 @@ function ThreadSkeleton() {
             {[0, 1, 2].map((item) => <div key={item} className="h-28 animate-pulse rounded-2xl bg-slate-100" />)}
           </div>
         </div>
-      </div>
-      <div className="h-64 animate-pulse rounded-3xl bg-white" />
     </div>
   );
 }

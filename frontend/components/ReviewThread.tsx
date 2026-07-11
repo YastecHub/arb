@@ -8,7 +8,8 @@ import {
   SentIcon,
   UserIcon,
 } from '@hugeicons/core-free-icons';
-import type { SubmissionThreadEvent, ThreadEventType } from '@/lib/types';
+import Link from 'next/link';
+import type { SubmissionStatus, SubmissionThreadEvent, ThreadEventType } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { Icon } from './icons';
 
@@ -34,7 +35,15 @@ const EVENT_ACCENTS: Record<ThreadEventType, string> = {
   republished: 'bg-green-100 text-green-700',
 };
 
-export function ReviewThread({ events, viewerRole }: { events: SubmissionThreadEvent[]; viewerRole: 'student' | 'admin' }) {
+export function ReviewThread({
+  events,
+  viewerRole,
+  composer,
+}: {
+  events: SubmissionThreadEvent[];
+  viewerRole: 'student' | 'admin';
+  composer?: React.ReactNode;
+}) {
   return (
     <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 bg-[#071826] px-5 py-4 text-white">
@@ -65,6 +74,7 @@ export function ReviewThread({ events, viewerRole }: { events: SubmissionThreadE
           ))
         )}
       </div>
+      {composer && <div className="border-t border-slate-200 bg-white p-4">{composer}</div>}
     </div>
   );
 }
@@ -171,8 +181,8 @@ export function RevisionComposer({
   onSubmit: () => void;
 }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-      <div className="border-b border-slate-100 px-5 py-4">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div>
         <h3 className="font-bold text-[#071826]">Reply with revised paper</h3>
         <p className="mt-1 text-sm text-slate-500">Write a short response and attach the corrected PDF.</p>
       </div>
@@ -213,3 +223,94 @@ export function RevisionComposer({
   );
 }
 
+export function WaitingComposer({ closed }: { closed: boolean }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+      {closed
+        ? 'This review conversation is closed because a final decision has been recorded.'
+        : 'This paper is currently with ARB reviewers. Reply options will appear here if revisions are requested.'}
+    </div>
+  );
+}
+
+export function AdminDecisionComposer({
+  status,
+  indexStatus,
+  comment,
+  busy,
+  onComment,
+  onAction,
+  paperHref,
+}: {
+  status: SubmissionStatus;
+  indexStatus?: string;
+  comment: string;
+  busy: string;
+  onComment: (value: string) => void;
+  onAction: (action: 'approve' | 'request-revision' | 'reject' | 'unpublish' | 'republish') => void;
+  paperHref: string;
+}) {
+  if (status === 'pending_review') {
+    return (
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3">
+          <h3 className="font-bold text-[#071826]">Reply as ARB reviewer</h3>
+          <p className="mt-1 text-sm text-slate-500">Write feedback, then choose the review decision.</p>
+        </div>
+        <textarea
+          className="input min-h-[120px] rounded-2xl"
+          placeholder="Type review comments here..."
+          value={comment}
+          onChange={(event) => onComment(event.target.value)}
+        />
+        <div className="mt-3 grid gap-2 md:grid-cols-3">
+          <button className="btn-primary" disabled={!!busy} onClick={() => onAction('approve')}>
+            {busy === 'approve' ? 'Publishing…' : 'Approve & publish'}
+          </button>
+          <button className="btn-outline" disabled={!!busy} onClick={() => onAction('request-revision')}>
+            {busy === 'request-revision' ? 'Sending…' : 'Request revision'}
+          </button>
+          <button className="btn-danger" disabled={!!busy} onClick={() => onAction('reject')}>
+            {busy === 'reject' ? 'Rejecting…' : 'Reject'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'published') {
+    return (
+      <div className="flex flex-col gap-3 rounded-2xl border border-green-200 bg-green-50 p-4 text-sm text-green-800 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="font-bold">This paper is live in the public library.</p>
+          {indexStatus && <p className="mt-1 text-xs">Index status: {indexStatus}</p>}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button className="btn-outline" disabled={!!busy} onClick={() => onAction('unpublish')}>
+            {busy === 'unpublish' ? 'Unpublishing…' : 'Unpublish'}
+          </button>
+          <Link href={paperHref} className="btn-ghost">
+            View in library
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unpublished') {
+    return (
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700 md:flex-row md:items-center md:justify-between">
+        <p className="font-semibold">This paper is currently hidden from the public library.</p>
+        <button className="btn-primary" disabled={!!busy} onClick={() => onAction('republish')}>
+          {busy === 'republish' ? 'Republishing…' : 'Re-publish'}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-600">
+      This paper is currently marked as <strong>{status.replace('_', ' ')}</strong>. No reviewer action is available right now.
+    </div>
+  );
+}

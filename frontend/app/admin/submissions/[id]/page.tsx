@@ -8,7 +8,7 @@ import type { Submission, SubmissionThreadEvent } from '@/lib/types';
 import { StatusBadge, Spinner, Alert, Tag } from '@/components/ui';
 import { formatDate } from '@/lib/format';
 import AppShell from '@/components/AppShell';
-import { ReviewThread } from '@/components/ReviewThread';
+import { AdminDecisionComposer, ReviewThread } from '@/components/ReviewThread';
 
 export default function ReviewPage() {
   const { id } = useParams<{ id: string }>();
@@ -102,17 +102,13 @@ export default function ReviewPage() {
     );
   }
 
-  const canDecide = sub.status === 'pending_review';
-
   return (
     <AppShell
       title="Review submission"
       subtitle="Read the paper details, view the PDF, and record the board decision."
       actions={<Link href="/admin" className="btn-outline">← Back to review desk</Link>}
     >
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
-        {/* Document + metadata */}
+    <div className="mx-auto max-w-6xl space-y-6">
         <div className="space-y-4">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-2">
@@ -138,7 +134,22 @@ export default function ReviewPage() {
             </div>
           </div>
 
-          <ReviewThread events={events} viewerRole="admin" />
+          {error && <Alert>{error}</Alert>}
+          <ReviewThread
+            events={events}
+            viewerRole="admin"
+            composer={
+              <AdminDecisionComposer
+                status={sub.status}
+                indexStatus={sub.index_status}
+                comment={comment}
+                busy={busy}
+                onComment={setComment}
+                onAction={act}
+                paperHref={`/paper/${sub.id}`}
+              />
+            }
+          />
 
           {sub.has_pdf ? (
             <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -156,60 +167,6 @@ export default function ReviewPage() {
             <Alert kind="info">No PDF was attached to this submission.</Alert>
           )}
         </div>
-
-        {/* Decision panel */}
-        <aside className="space-y-4">
-          <div className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-semibold text-slate-800">Review decision</h2>
-            {error && <Alert>{error}</Alert>}
-
-            {sub.review_comment && (
-              <div className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-                <span className="font-medium">Last comment:</span> {sub.review_comment}
-              </div>
-            )}
-
-            {canDecide ? (
-              <>
-                <textarea
-                  className="input min-h-[100px]"
-                  placeholder="Comments (required to request revision, optional to reject)"
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                />
-                <button className="btn-primary w-full" disabled={!!busy} onClick={() => act('approve')}>
-                  {busy === 'approve' ? 'Publishing…' : 'Approve & publish'}
-                </button>
-                <button className="btn-outline w-full" disabled={!!busy} onClick={() => act('request-revision')}>
-                  {busy === 'request-revision' ? '…' : 'Request revision'}
-                </button>
-                <button className="btn-danger w-full" disabled={!!busy} onClick={() => act('reject')}>
-                  {busy === 'reject' ? '…' : 'Reject'}
-                </button>
-              </>
-            ) : sub.status === 'published' ? (
-              <>
-                <Alert kind="success">This paper is live in the public library.</Alert>
-                <p className="text-xs text-slate-500">Index status: {sub.index_status}</p>
-                <button className="btn-outline w-full" disabled={!!busy} onClick={() => act('unpublish')}>
-                  {busy === 'unpublish' ? '…' : 'Unpublish'}
-                </button>
-                <Link href={`/paper/${sub.id}`} className="btn-ghost w-full">
-                  View in library
-                </Link>
-              </>
-            ) : sub.status === 'unpublished' ? (
-              <button className="btn-primary w-full" disabled={!!busy} onClick={() => act('republish')}>
-                {busy === 'republish' ? '…' : 'Re-publish'}
-              </button>
-            ) : (
-              <Alert kind="info">
-                This submission is <strong>{sub.status.replace('_', ' ')}</strong>. Awaiting the student.
-              </Alert>
-            )}
-          </div>
-        </aside>
-      </div>
     </div>
     </AppShell>
   );
@@ -217,8 +174,7 @@ export default function ReviewPage() {
 
 function ReviewSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+    <div className="mx-auto max-w-6xl space-y-6">
         <div className="space-y-4">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="h-7 w-3/4 animate-pulse rounded-full bg-slate-200" />
@@ -231,22 +187,22 @@ function ReviewSkeleton() {
             </div>
           </div>
           <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-[#071826] px-5 py-4">
+              <div className="h-5 w-48 animate-pulse rounded-full bg-white/20" />
+            </div>
+            <div className="space-y-4 bg-slate-50 p-5">
+              <div className="h-24 w-2/3 animate-pulse rounded-2xl bg-white" />
+              <div className="ml-auto h-24 w-2/3 animate-pulse rounded-2xl bg-slate-200" />
+              <div className="h-36 animate-pulse rounded-2xl bg-white" />
+            </div>
+          </div>
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
             <div className="border-b border-slate-100 px-4 py-3">
               <div className="h-4 w-24 animate-pulse rounded-full bg-slate-200" />
             </div>
-            <div className="h-[70vh] animate-pulse bg-slate-100" />
+            <div className="h-[50vh] animate-pulse bg-slate-100" />
           </div>
         </div>
-        <aside>
-          <div className="space-y-3 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="h-5 w-36 animate-pulse rounded-full bg-slate-200" />
-            <div className="h-28 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-11 animate-pulse rounded-xl bg-amber-100" />
-            <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
-            <div className="h-11 animate-pulse rounded-xl bg-slate-100" />
-          </div>
-        </aside>
-      </div>
     </div>
   );
 }
