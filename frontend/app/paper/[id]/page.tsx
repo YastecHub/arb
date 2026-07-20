@@ -6,6 +6,7 @@ import { api, API_URL } from '@/lib/api';
 import type { Paper } from '@/lib/types';
 import { Tag, Spinner, Alert } from '@/components/ui';
 import { formatDate } from '@/lib/format';
+import PdfViewer from '@/components/PdfViewer';
 
 export default function PaperDetail() {
   const { id } = useParams<{ id: string }>();
@@ -57,10 +58,7 @@ export default function PaperDetail() {
         <p className="whitespace-pre-line leading-relaxed text-slate-700">{paper.abstract}</p>
       </section>
 
-      <section className="card overflow-hidden">
-        <div className="border-b border-slate-100 px-6 py-3 text-sm font-semibold text-slate-600">Document preview</div>
-        <iframe src={downloadUrl} title="PDF preview" className="h-[80vh] w-full" />
-      </section>
+      <PdfViewer url={downloadUrl} title={paper.title} />
     </article>
   );
 }

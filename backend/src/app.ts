@@ -1,7 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
 import { env } from './config/env';
+import { swaggerSpec } from './config/swagger';
 import { errorHandler } from './middleware/error';
 import authRoutes from './modules/auth/auth.routes';
 import submissionRoutes from './modules/submissions/submissions.routes';
@@ -20,6 +22,11 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'arb-researchhub', env: env.nodeEnv }));
+
+  // Swagger Documentation
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+  app.get('/docs.json', (_req, res) => res.json(swaggerSpec));
 
   app.use('/api/auth', authRoutes);
   app.use('/api/submissions', submissionRoutes);
